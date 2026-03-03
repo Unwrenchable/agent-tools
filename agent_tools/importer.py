@@ -35,6 +35,8 @@ def _parse_frontmatter(content: str) -> tuple[dict[str, str], str]:
     body = content[end + 5 :]
     frontmatter: dict[str, str] = {}
     for line in raw.splitlines():
+        if line.strip().startswith("#"):
+            continue
         if ":" not in line:
             continue
         key, value = line.split(":", 1)
