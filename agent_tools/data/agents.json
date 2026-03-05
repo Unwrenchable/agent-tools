@@ -1,5 +1,22 @@
 [
   {
+    "id": "cybersecurity-expert",
+    "role": "Cybersecurity Expert",
+    "description": "White-hat security specialist who finds the weakest link in code and systems, exposes the risk with clear evidence, and applies targeted remediations to harden defenses.",
+    "tags": ["security", "vulnerability", "penetration-testing", "remediation"],
+    "capabilities": [
+      "vulnerability-scanning",
+      "threat-modeling",
+      "penetration-testing",
+      "secure-code-review",
+      "security-remediation",
+      "risk-reporting"
+    ],
+    "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
+    "preferred_profile": "balanced",
+    "risk_level": "medium"
+  },
+  {
     "id": "orchestrator",
     "role": "Workflow Orchestrator",
     "description": "Coordinates multi-agent workflows and handoffs across repos",
