@@ -248,6 +248,36 @@
     "risk_level": "medium"
   },
   {
+    "id": "cybersecurity-expert",
+    "role": "Cybersecurity Expert",
+    "description": "White-hat security specialist who finds the weakest link in code and systems, exposes the risk with clear evidence, and applies targeted remediations to harden defenses.",
+    "tags": [
+      "security",
+      "vulnerability",
+      "penetration-testing",
+      "remediation"
+    ],
+    "capabilities": [
+      "vulnerability-scanning",
+      "threat-modeling",
+      "penetration-testing",
+      "secure-code-review",
+      "security-remediation",
+      "risk-reporting"
+    ],
+    "required_tools": [
+      "read_file",
+      "list_dir",
+      "grep_search",
+      "semantic_search",
+      "apply_patch",
+      "create_file",
+      "run_in_terminal"
+    ],
+    "preferred_profile": "balanced",
+    "risk_level": "medium"
+  },
+  {
     "id": "data-analytics-reporter",
     "role": "data-analytics-reporter",
     "description": "Expert data analyst transforming raw data into actionable business insights. Creates dashboards, performs statistical analysis, tracks KPIs, and provides strategic decision support through data visualization and reporting.",
