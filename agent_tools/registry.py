@@ -2,9 +2,48 @@ from __future__ import annotations
 
 import json
 from importlib.resources import files
+from pathlib import Path
 from typing import Iterable
 
 from .models import AccessProfile, AgentDefinition
+
+
+def _find_agentx_override(filename: str) -> Path | None:
+    """Walk from CWD upward to find .agentx/<filename>, stopping at a .git boundary."""
+    current = Path.cwd()
+    for directory in [current, *current.parents]:
+        candidate = directory / ".agentx" / filename
+        if candidate.is_file():
+            return candidate
+        if (directory / ".git").exists():
+            break
+    return None
+
+
+def _merge_json_lists(base: list[dict], override: list[dict]) -> list[dict]:
+    """Merge *override* into *base*, keyed by the item's 'id' or 'name' field.
+
+    Items that are not dicts or that lack both 'id' and 'name' are skipped.
+    """
+    def _key(item: dict) -> str:
+        return str(item.get("id") or item.get("name") or "")
+
+    merged: dict[str, dict] = {}
+    for item in base:
+        if not isinstance(item, dict):
+            continue
+        k = _key(item)
+        if k:
+            merged[k] = item
+
+    for item in override:
+        if not isinstance(item, dict):
+            continue
+        k = _key(item)
+        if k:
+            merged[k] = item
+
+    return list(merged.values())
 
 
 def _load_json_resource(filename: str) -> list[dict]:
@@ -13,6 +52,16 @@ def _load_json_resource(filename: str) -> list[dict]:
         data = json.load(handle)
     if not isinstance(data, list):
         raise ValueError(f"Resource {filename} must contain a JSON array")
+
+    local_path = _find_agentx_override(filename)
+    if local_path is not None:
+        try:
+            local_data = json.loads(local_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Invalid JSON in per-repo override {local_path}: {exc}") from exc
+        if isinstance(local_data, list):
+            data = _merge_json_lists(data, local_data)
+
     return data
 
 
