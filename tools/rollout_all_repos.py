@@ -71,6 +71,16 @@ def detect_stack_tags(repo_path: Path) -> list[str]:
         tags.update(["containers"])
     if (repo_path / ".github" / "workflows").exists():
         tags.update(["ci-cd"])
+    if (repo_path / "next.config.js").exists() or (repo_path / "next.config.ts").exists():
+        tags.add("nextjs")
+    if (repo_path / "tailwind.config.js").exists() or (repo_path / "tailwind.config.ts").exists():
+        tags.add("tailwind")
+    if (repo_path / "prisma").is_dir():
+        tags.add("prisma")
+    if any((repo_path / d).is_dir() for d in ("terraform", "infra", "infrastructure")):
+        tags.add("infrastructure")
+    if any((repo_path / d).is_dir() for d in ("kubernetes", "k8s", "helm")):
+        tags.add("kubernetes")
     if not tags:
         tags.add("general")
     return sorted(tags)
@@ -78,7 +88,8 @@ def detect_stack_tags(repo_path: Path) -> list[str]:
 
 def build_custom_agents(repo_name: str, tags: list[str]) -> list[dict]:
     base_id = slugify(repo_name)
-    return [
+    tag_set = set(tags)
+    agents = [
         {
             "id": f"{base_id}-repo-architect",
             "role": f"{repo_name} Repository Architect",
@@ -95,7 +106,7 @@ def build_custom_agents(repo_name: str, tags: list[str]) -> list[dict]:
             "description": "Executes scoped code changes with validation and release hygiene.",
             "tags": [repo_name, *tags, "implementation", "quality"],
             "capabilities": ["code-changes", "refactoring", "test-validation"],
-            "required_tools": ["read_file", "apply_patch", "create_file", "run_in_terminal"],
+            "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
             "preferred_profile": "balanced",
             "risk_level": "medium",
         },
@@ -105,11 +116,38 @@ def build_custom_agents(repo_name: str, tags: list[str]) -> list[dict]:
             "description": "Coordinates planning, implementation, and verification agents for this repository.",
             "tags": [repo_name, *tags, "orchestration", "multi-agent"],
             "capabilities": ["task-routing", "handoffs", "delivery-status"],
-            "required_tools": ["read_file", "list_dir", "runSubagent"],
+            "required_tools": ["read_file", "list_dir", "runSubagent", "github_repo"],
             "preferred_profile": "power",
             "risk_level": "medium",
         },
+        {
+            "id": f"{base_id}-qa-pilot",
+            "role": f"{repo_name} QA Pilot",
+            "description": "Plans and runs unit, integration, and end-to-end tests to ensure shipping quality for this repository.",
+            "tags": [repo_name, *tags, "testing", "quality"],
+            "capabilities": ["test-planning", "unit-testing", "integration-testing", "e2e-testing", "coverage-reporting"],
+            "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
+            "preferred_profile": "balanced",
+            "risk_level": "medium",
+        },
     ]
+
+    # Add a DevOps pilot for repos with CI/CD, containers, or infrastructure
+    if tag_set & {"ci-cd", "containers", "kubernetes", "infrastructure"}:
+        agents.append(
+            {
+                "id": f"{base_id}-devops-pilot",
+                "role": f"{repo_name} DevOps Pilot",
+                "description": "Manages CI/CD pipelines, container builds, and deployment workflows for this repository.",
+                "tags": [repo_name, *tags, "devops", "deployment"],
+                "capabilities": ["pipeline-configuration", "container-management", "release-automation", "monitoring-setup"],
+                "required_tools": ["read_file", "list_dir", "grep_search", "apply_patch", "create_file", "run_in_terminal", "github_repo"],
+                "preferred_profile": "power",
+                "risk_level": "medium",
+            }
+        )
+
+    return agents
 
 
 def write_agentx_pack(repo_path: Path, repo_name: str, base_agents: list[dict], profiles: list[dict], agency_agents: list[dict]) -> None:
@@ -130,18 +168,31 @@ def write_agentx_pack(repo_path: Path, repo_name: str, base_agents: list[dict], 
 
     readme = f"""# AgentX Pack for {repo_name}
 
-This repository is upgraded with AgentX capabilities.
+This repository is upgraded with AgentX capabilities for full-stack development and deployment.
 
 ## Included
 - `agents.json`: merged core + imported + custom per-repo agents
 - `access_profiles.json`: safe/balanced/power profiles
 - `agency_import.json`: imported agents from agency-agents
 
+## Per-Repo Agents
+| Agent | Profile | Purpose |
+|-------|---------|---------|
+| `{slugify(repo_name)}-repo-architect` | safe | Architecture planning and dependency review |
+| `{slugify(repo_name)}-implementation-pilot` | balanced | Code changes, refactoring, test validation |
+| `{slugify(repo_name)}-orchestrator` | power | Multi-agent coordination and handoffs |
+| `{slugify(repo_name)}-qa-pilot` | balanced | Test planning, unit/integration/e2e tests |
+| `{slugify(repo_name)}-devops-pilot` | power | CI/CD pipelines, containers, deployments |
+
+> **Note:** The `devops-pilot` agent is only generated for repositories that contain CI/CD
+> workflows, container configuration, Kubernetes manifests, or infrastructure-as-code.
+
 ## Suggested commands
 ```bash
 agentx find {repo_name}
 agentx check {slugify(repo_name)}-implementation-pilot --profile balanced
 agentx check {slugify(repo_name)}-orchestrator --profile power
+agentx check {slugify(repo_name)}-qa-pilot --profile balanced
 ```
 """
     (agentx_dir / "README.md").write_text(readme, encoding="utf-8")

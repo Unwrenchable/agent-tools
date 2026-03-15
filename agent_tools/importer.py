@@ -96,6 +96,18 @@ def _infer_required_tools(body: str, role: str) -> list[str]:
     if "analysis" in lowered or "research" in lowered:
         required.update({"grep_search", "semantic_search"})
 
+    # Full-stack / deployment patterns
+    if any(kw in lowered for kw in ("frontend", "ui component", "react", "vue", "angular", "next.js", "design system")):
+        required.update({"apply_patch", "create_file"})
+    if any(kw in lowered for kw in ("backend", "server-side", "api endpoint", "rest api", "graphql", "database schema")):
+        required.update({"apply_patch", "create_file"})
+    if any(kw in lowered for kw in ("deploy", "docker", "container", "ci/cd", "pipeline", "devops", "kubernetes", "infrastructure")):
+        required.add("run_in_terminal")
+    if any(kw in lowered for kw in ("unit test", "integration test", "end-to-end", "e2e test", "test suite", "qa")):
+        required.update({"grep_search", "run_in_terminal"})
+    if any(kw in lowered for kw in ("fullstack", "full-stack", "full stack", "ship", "shipping")):
+        required.update({"apply_patch", "create_file", "grep_search", "semantic_search", "run_in_terminal"})
+
     ordered = [name for name in KNOWN_TOOLS if name in required]
     return sorted(ordered)
 
