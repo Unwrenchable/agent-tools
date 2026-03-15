@@ -124,11 +124,20 @@ pyproject.toml
 README.md
 ```
 
+## Per-repo overrides
+
+Place a `.agentx/agents.json` and/or `.agentx/access_profiles.json` in your repo root (or any ancestor directory up to the nearest `.git` boundary). The CLI automatically discovers these files and **merges** them with the package defaults: per-repo entries override package entries with the same `id`/`name`, and additional entries are appended.
+
+This means you can ship a lean base registry in the package and let each repository extend it with project-specific agents—exactly what the `.agentx/` pack already set up for this repo.
+
+```bash
+# Verify your repo-local agents are picked up
+agentx list
+```
+
 ## Next extensions
 
-- add `agentx import-agency` to map markdown agents into JSON definitions
 - add task-based policy checks (derive needed tools from task type)
-- add per-repo overrides (`.agentx/agents.json` and `.agentx/profiles.json`)
 
 ## Multi-repo rollout (all repos)
 
