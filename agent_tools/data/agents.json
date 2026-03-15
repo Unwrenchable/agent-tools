@@ -1,9 +1,39 @@
 [
   {
+    "id": "api-designer",
+    "role": "API Designer",
+    "description": "Leads contract-first API design using OpenAPI/GraphQL specs, enforces versioning discipline, designs pagination and error schemas, and ensures APIs are consistent, self-documenting, and backward-compatible.",
+    "tags": ["api", "openapi", "graphql", "design", "contracts"],
+    "capabilities": ["openapi-spec-authoring", "graphql-schema-design", "versioning-strategy", "error-schema-design", "pagination-patterns", "backward-compatibility-review"],
+    "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file"],
+    "preferred_profile": "balanced",
+    "risk_level": "medium"
+  },
+  {
+    "id": "backend-engineer",
+    "role": "Backend Engineer",
+    "description": "Designs and implements server-side APIs, business logic, data models, and integration points for scalable applications. Enforces input validation, error boundaries, structured logging, and graceful degradation at every layer.",
+    "tags": ["backend", "api", "server", "database"],
+    "capabilities": ["api-design", "business-logic", "data-modelling", "authentication", "performance-tuning", "error-handling"],
+    "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
+    "preferred_profile": "balanced",
+    "risk_level": "medium"
+  },
+  {
+    "id": "capability-guardian",
+    "role": "Capability Guardian",
+    "description": "Enforces least-privilege access across every agent assignment. Audits required_tools vs granted profile tools, flags over-provisioned agents, recommends the narrowest profile that satisfies each task, and documents access decisions.",
+    "tags": ["security", "policy", "governance", "least-privilege"],
+    "capabilities": ["least-privilege", "policy-check", "access-recommendation", "over-provisioning-audit", "access-documentation"],
+    "required_tools": ["read_file", "list_dir"],
+    "preferred_profile": "safe",
+    "risk_level": "low"
+  },
+  {
     "id": "cybersecurity-expert",
     "role": "Cybersecurity Expert",
-    "description": "White-hat security specialist who finds the weakest link in code and systems, exposes the risk with clear evidence, and applies targeted remediations to harden defenses.",
-    "tags": ["security", "vulnerability", "penetration-testing", "remediation"],
+    "description": "White-hat security specialist who finds the weakest link in code and systems, exposes the risk with clear evidence, and applies targeted remediations to harden defenses. Performs OWASP Top-10 reviews, dependency CVE triage, and secrets hygiene audits.",
+    "tags": ["security", "vulnerability", "penetration-testing", "remediation", "owasp"],
     "capabilities": [
       "vulnerability-scanning",
       "threat-modeling",
@@ -17,71 +47,11 @@
     "risk_level": "medium"
   },
   {
-    "id": "orchestrator",
-    "role": "Workflow Orchestrator",
-    "description": "Coordinates multi-agent workflows and handoffs across repos, breaking down full-stack features into sub-tasks and routing work to the right specialist agents.",
-    "tags": ["planning", "coordination", "multi-repo", "fullstack"],
-    "capabilities": ["task-breakdown", "status-tracking", "dependency-ordering", "cross-repo-handoff", "release-coordination"],
-    "required_tools": ["read_file", "list_dir", "runSubagent", "github_repo"],
-    "preferred_profile": "power",
-    "risk_level": "medium"
-  },
-  {
-    "id": "repo-auditor",
-    "role": "Repository Auditor",
-    "description": "Scans repositories for patterns, quality, migration opportunities, and skill gaps needed for full-stack delivery.",
-    "tags": ["analysis", "quality", "migration"],
-    "capabilities": ["code-search", "gap-analysis", "reporting", "dependency-audit", "stack-assessment"],
-    "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search"],
-    "preferred_profile": "safe",
-    "risk_level": "low"
-  },
-  {
-    "id": "implementation-engineer",
-    "role": "Implementation Engineer",
-    "description": "Applies focused code changes with validation across the full stack, navigating any layer from UI components to backend APIs.",
-    "tags": ["coding", "fixes", "delivery", "fullstack"],
-    "capabilities": ["patching", "validation", "targeted-refactors", "api-integration", "test-writing"],
-    "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
-    "preferred_profile": "balanced",
-    "risk_level": "medium"
-  },
-  {
-    "id": "capability-guardian",
-    "role": "Capability Guardian",
-    "description": "Checks whether an agent has enough and not too much access for a task",
-    "tags": ["security", "policy", "governance"],
-    "capabilities": ["least-privilege", "policy-check", "access-recommendation"],
-    "required_tools": ["read_file", "list_dir"],
-    "preferred_profile": "safe",
-    "risk_level": "low"
-  },
-  {
-    "id": "fullstack-engineer",
-    "role": "Full-Stack Engineer",
-    "description": "Builds complete features end-to-end across frontend, backend, and database layers, shipping production-ready code with tests.",
-    "tags": ["frontend", "backend", "fullstack", "delivery"],
-    "capabilities": ["feature-delivery", "api-design", "ui-implementation", "database-integration", "test-writing", "deployment-prep"],
-    "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
-    "preferred_profile": "balanced",
-    "risk_level": "medium"
-  },
-  {
-    "id": "frontend-engineer",
-    "role": "Frontend Engineer",
-    "description": "Specializes in UI components, responsive design, state management, and browser performance for web applications.",
-    "tags": ["frontend", "ui", "components", "design-system"],
-    "capabilities": ["component-development", "responsive-design", "state-management", "accessibility", "performance-optimization", "design-system-integration"],
-    "required_tools": ["read_file", "list_dir", "grep_search", "apply_patch", "create_file", "run_in_terminal"],
-    "preferred_profile": "balanced",
-    "risk_level": "medium"
-  },
-  {
-    "id": "backend-engineer",
-    "role": "Backend Engineer",
-    "description": "Designs and implements server-side APIs, business logic, data models, and integration points for scalable applications.",
-    "tags": ["backend", "api", "server", "database"],
-    "capabilities": ["api-design", "business-logic", "data-modelling", "authentication", "performance-tuning", "error-handling"],
+    "id": "database-architect",
+    "role": "Database Architect",
+    "description": "Designs normalized schemas, authors and validates migrations, optimizes slow queries with explain-plan analysis, implements indexing strategies, and establishes data-integrity constraints and backup policies.",
+    "tags": ["database", "schema", "migrations", "sql", "data-integrity"],
+    "capabilities": ["schema-design", "migration-authoring", "query-optimization", "index-strategy", "data-integrity-enforcement", "backup-policy"],
     "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
     "preferred_profile": "balanced",
     "risk_level": "medium"
@@ -89,7 +59,7 @@
   {
     "id": "devops-engineer",
     "role": "DevOps Engineer",
-    "description": "Manages CI/CD pipelines, container orchestration, infrastructure-as-code, and deployment workflows to keep apps shipping fast and reliably.",
+    "description": "Manages CI/CD pipelines, container orchestration, infrastructure-as-code, and deployment workflows to keep apps shipping fast and reliably. Instruments observability, automates secret rotation, and enforces deployment gates.",
     "tags": ["devops", "ci-cd", "containers", "infrastructure", "deployment"],
     "capabilities": ["pipeline-configuration", "container-management", "infrastructure-as-code", "secret-rotation", "monitoring-setup", "release-automation"],
     "required_tools": ["read_file", "list_dir", "grep_search", "apply_patch", "create_file", "run_in_terminal", "github_repo"],
@@ -97,13 +67,83 @@
     "risk_level": "medium"
   },
   {
+    "id": "documentation-specialist",
+    "role": "Documentation Specialist",
+    "description": "Produces and maintains living documentation: README files, architecture decision records (ADRs), API reference docs, runbooks, onboarding guides, and inline code comments. Keeps docs in sync with code changes.",
+    "tags": ["documentation", "adr", "runbook", "readme", "knowledge-base"],
+    "capabilities": ["readme-authoring", "adr-writing", "api-reference-generation", "runbook-creation", "onboarding-guide", "inline-doc-review"],
+    "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file"],
+    "preferred_profile": "balanced",
+    "risk_level": "low"
+  },
+  {
+    "id": "frontend-engineer",
+    "role": "Frontend Engineer",
+    "description": "Specializes in UI components, responsive design, state management, and browser performance for web applications. Enforces accessibility standards (WCAG 2.1), optimizes Core Web Vitals, and maintains design-system consistency.",
+    "tags": ["frontend", "ui", "components", "design-system", "accessibility"],
+    "capabilities": ["component-development", "responsive-design", "state-management", "accessibility", "performance-optimization", "design-system-integration"],
+    "required_tools": ["read_file", "list_dir", "grep_search", "apply_patch", "create_file", "run_in_terminal"],
+    "preferred_profile": "balanced",
+    "risk_level": "medium"
+  },
+  {
+    "id": "fullstack-engineer",
+    "role": "Full-Stack Engineer",
+    "description": "Builds complete features end-to-end across frontend, backend, and database layers, shipping production-ready code with tests. Owns the feature from ticket to deployment, coordinating UI, API, data, and pipeline concerns.",
+    "tags": ["frontend", "backend", "fullstack", "delivery"],
+    "capabilities": ["feature-delivery", "api-design", "ui-implementation", "database-integration", "test-writing", "deployment-prep"],
+    "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
+    "preferred_profile": "balanced",
+    "risk_level": "medium"
+  },
+  {
+    "id": "implementation-engineer",
+    "role": "Implementation Engineer",
+    "description": "Applies focused code changes with validation across the full stack, navigating any layer from UI components to backend APIs. Validates each change with targeted tests and ensures CI passes before marking work complete.",
+    "tags": ["coding", "fixes", "delivery", "fullstack"],
+    "capabilities": ["patching", "validation", "targeted-refactors", "api-integration", "test-writing"],
+    "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
+    "preferred_profile": "balanced",
+    "risk_level": "medium"
+  },
+  {
+    "id": "orchestrator",
+    "role": "Workflow Orchestrator",
+    "description": "Coordinates multi-agent workflows and handoffs across repos, breaking down full-stack features into sub-tasks and routing work to the right specialist agents. Tracks delivery status, resolves blockers, and ensures orderly release coordination.",
+    "tags": ["planning", "coordination", "multi-repo", "fullstack"],
+    "capabilities": ["task-breakdown", "status-tracking", "dependency-ordering", "cross-repo-handoff", "release-coordination"],
+    "required_tools": ["read_file", "list_dir", "runSubagent", "github_repo"],
+    "preferred_profile": "power",
+    "risk_level": "medium"
+  },
+  {
+    "id": "performance-engineer",
+    "role": "Performance Engineer",
+    "description": "Profiles applications to locate bottlenecks in CPU, memory, I/O, and network. Implements caching strategies, tunes database queries, right-sizes infrastructure, and establishes performance budgets with automated regression alerts.",
+    "tags": ["performance", "profiling", "optimization", "caching", "scalability"],
+    "capabilities": ["profiling", "bottleneck-analysis", "caching-strategy", "query-optimization", "load-testing", "performance-budgeting"],
+    "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
+    "preferred_profile": "balanced",
+    "risk_level": "medium"
+  },
+  {
     "id": "qa-engineer",
     "role": "QA Engineer",
-    "description": "Plans and implements testing strategies covering unit, integration, and end-to-end tests to ensure shipping quality.",
+    "description": "Plans and implements testing strategies covering unit, integration, and end-to-end tests to ensure shipping quality. Defines coverage targets, sets up test fixtures, maintains CI test gates, and drives regression-prevention culture.",
     "tags": ["testing", "quality", "qa", "validation"],
     "capabilities": ["test-planning", "unit-testing", "integration-testing", "e2e-testing", "coverage-reporting", "regression-prevention"],
     "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
     "preferred_profile": "balanced",
     "risk_level": "medium"
+  },
+  {
+    "id": "repo-auditor",
+    "role": "Repository Auditor",
+    "description": "Scans repositories for patterns, quality, migration opportunities, and skill gaps needed for full-stack delivery. Produces gap-analysis reports with prioritized recommendations and tracks remediation progress over time.",
+    "tags": ["analysis", "quality", "migration", "audit"],
+    "capabilities": ["code-search", "gap-analysis", "reporting", "dependency-audit", "stack-assessment"],
+    "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search"],
+    "preferred_profile": "safe",
+    "risk_level": "low"
   }
 ]

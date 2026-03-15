@@ -59,28 +59,60 @@ def slugify(value: str) -> str:
 
 def detect_stack_tags(repo_path: Path) -> list[str]:
     tags: set[str] = set()
+    # JavaScript / Node
     if (repo_path / "package.json").exists():
         tags.update(["node", "javascript"])
+    # Python
     if (repo_path / "pyproject.toml").exists() or (repo_path / "requirements.txt").exists():
         tags.update(["python"])
+    # Go
     if (repo_path / "go.mod").exists():
         tags.update(["go"])
+    # Rust
     if (repo_path / "Cargo.toml").exists():
         tags.update(["rust"])
+    # Ruby
+    if (repo_path / "Gemfile").exists():
+        tags.update(["ruby"])
+    # Java / Kotlin (Maven or Gradle)
+    if (repo_path / "pom.xml").exists() or (repo_path / "build.gradle").exists() or (repo_path / "build.gradle.kts").exists():
+        tags.update(["jvm"])
+    # .NET / C#
+    if any(repo_path.glob("*.csproj")) or any(repo_path.glob("*.sln")):
+        tags.update(["dotnet"])
+    # PHP
+    if (repo_path / "composer.json").exists():
+        tags.update(["php"])
+    # Swift / iOS
+    if (repo_path / "Package.swift").exists() or any(repo_path.glob("*.xcodeproj")):
+        tags.update(["swift"])
+    # Containers
     if (repo_path / "Dockerfile").exists() or (repo_path / "docker-compose.yml").exists():
         tags.update(["containers"])
+    # CI/CD
     if (repo_path / ".github" / "workflows").exists():
         tags.update(["ci-cd"])
+    # Next.js
     if (repo_path / "next.config.js").exists() or (repo_path / "next.config.ts").exists():
         tags.add("nextjs")
+    # Tailwind CSS
     if (repo_path / "tailwind.config.js").exists() or (repo_path / "tailwind.config.ts").exists():
         tags.add("tailwind")
+    # Prisma ORM
     if (repo_path / "prisma").is_dir():
         tags.add("prisma")
+    # Infrastructure as Code
     if any((repo_path / d).is_dir() for d in ("terraform", "infra", "infrastructure")):
         tags.add("infrastructure")
+    # Kubernetes
     if any((repo_path / d).is_dir() for d in ("kubernetes", "k8s", "helm")):
         tags.add("kubernetes")
+    # Database migrations
+    if any((repo_path / d).is_dir() for d in ("migrations", "db", "database", "schema")):
+        tags.add("database")
+    # Documentation
+    if any((repo_path / d).is_dir() for d in ("docs", "doc", "documentation")):
+        tags.add("documentation")
     if not tags:
         tags.add("general")
     return sorted(tags)
@@ -93,9 +125,13 @@ def build_custom_agents(repo_name: str, tags: list[str]) -> list[dict]:
         {
             "id": f"{base_id}-repo-architect",
             "role": f"{repo_name} Repository Architect",
-            "description": "Maintains architecture consistency and coordinates upgrades for this repository.",
+            "description": (
+                f"Maintains architecture consistency and coordinates upgrades for {repo_name}. "
+                "Produces ADRs, tracks dependency health, flags breaking changes, and ensures "
+                "the codebase evolves in a deliberate, well-documented direction."
+            ),
             "tags": [repo_name, *tags, "architecture", "planning"],
-            "capabilities": ["roadmap-alignment", "upgrade-planning", "dependency-review"],
+            "capabilities": ["roadmap-alignment", "upgrade-planning", "dependency-review", "adr-authoring", "breaking-change-detection"],
             "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search"],
             "preferred_profile": "safe",
             "risk_level": "low",
@@ -103,9 +139,13 @@ def build_custom_agents(repo_name: str, tags: list[str]) -> list[dict]:
         {
             "id": f"{base_id}-implementation-pilot",
             "role": f"{repo_name} Implementation Pilot",
-            "description": "Executes scoped code changes with validation and release hygiene.",
+            "description": (
+                f"Executes scoped code changes with validation and release hygiene for {repo_name}. "
+                "Validates each change with targeted tests, enforces code-style consistency, and "
+                "ensures CI gates pass before marking work complete."
+            ),
             "tags": [repo_name, *tags, "implementation", "quality"],
-            "capabilities": ["code-changes", "refactoring", "test-validation"],
+            "capabilities": ["code-changes", "refactoring", "test-validation", "style-enforcement", "ci-gate-compliance"],
             "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
             "preferred_profile": "balanced",
             "risk_level": "medium",
@@ -113,9 +153,13 @@ def build_custom_agents(repo_name: str, tags: list[str]) -> list[dict]:
         {
             "id": f"{base_id}-orchestrator",
             "role": f"{repo_name} Multi-Agent Orchestrator",
-            "description": "Coordinates planning, implementation, and verification agents for this repository.",
+            "description": (
+                f"Coordinates planning, implementation, and verification agents for {repo_name}. "
+                "Breaks features into sub-tasks, routes work to the right specialist, tracks delivery "
+                "status, and resolves blockers to keep releases on schedule."
+            ),
             "tags": [repo_name, *tags, "orchestration", "multi-agent"],
-            "capabilities": ["task-routing", "handoffs", "delivery-status"],
+            "capabilities": ["task-routing", "handoffs", "delivery-status", "blocker-resolution", "release-coordination"],
             "required_tools": ["read_file", "list_dir", "runSubagent", "github_repo"],
             "preferred_profile": "power",
             "risk_level": "medium",
@@ -123,26 +167,100 @@ def build_custom_agents(repo_name: str, tags: list[str]) -> list[dict]:
         {
             "id": f"{base_id}-qa-pilot",
             "role": f"{repo_name} QA Pilot",
-            "description": "Plans and runs unit, integration, and end-to-end tests to ensure shipping quality for this repository.",
+            "description": (
+                f"Plans and runs unit, integration, and end-to-end tests for {repo_name}. "
+                "Defines coverage targets, maintains CI test gates, authors test fixtures, "
+                "and drives regression-prevention culture across the team."
+            ),
             "tags": [repo_name, *tags, "testing", "quality"],
-            "capabilities": ["test-planning", "unit-testing", "integration-testing", "e2e-testing", "coverage-reporting"],
+            "capabilities": ["test-planning", "unit-testing", "integration-testing", "e2e-testing", "coverage-reporting", "regression-prevention"],
             "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
             "preferred_profile": "balanced",
             "risk_level": "medium",
         },
+        {
+            "id": f"{base_id}-security-hardener",
+            "role": f"{repo_name} Security Hardener",
+            "description": (
+                f"Performs OWASP Top-10 reviews, dependency CVE triage, and secrets hygiene audits "
+                f"for {repo_name}. Applies targeted remediations, enforces secure-by-default patterns, "
+                "and documents residual risk with a clear remediation roadmap."
+            ),
+            "tags": [repo_name, *tags, "security", "vulnerability", "remediation"],
+            "capabilities": ["vulnerability-scanning", "cve-triage", "secrets-audit", "secure-code-review", "security-remediation", "risk-reporting"],
+            "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
+            "preferred_profile": "balanced",
+            "risk_level": "medium",
+        },
+        {
+            "id": f"{base_id}-documentation-pilot",
+            "role": f"{repo_name} Documentation Pilot",
+            "description": (
+                f"Produces and maintains living documentation for {repo_name}: README files, "
+                "architecture decision records (ADRs), API reference docs, runbooks, and onboarding "
+                "guides. Keeps docs in sync with every code change."
+            ),
+            "tags": [repo_name, *tags, "documentation", "knowledge-base"],
+            "capabilities": ["readme-authoring", "adr-writing", "api-reference-generation", "runbook-creation", "onboarding-guide", "doc-sync"],
+            "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file"],
+            "preferred_profile": "balanced",
+            "risk_level": "low",
+        },
     ]
 
-    # Add a DevOps pilot for repos with CI/CD, containers, or infrastructure
+    # DevOps pilot for repos with CI/CD, containers, or infrastructure
     if tag_set & {"ci-cd", "containers", "kubernetes", "infrastructure"}:
         agents.append(
             {
                 "id": f"{base_id}-devops-pilot",
                 "role": f"{repo_name} DevOps Pilot",
-                "description": "Manages CI/CD pipelines, container builds, and deployment workflows for this repository.",
+                "description": (
+                    f"Manages CI/CD pipelines, container builds, and deployment workflows for {repo_name}. "
+                    "Instruments observability, automates secret rotation, enforces deployment gates, "
+                    "and keeps the path from commit to production fast and reliable."
+                ),
                 "tags": [repo_name, *tags, "devops", "deployment"],
-                "capabilities": ["pipeline-configuration", "container-management", "release-automation", "monitoring-setup"],
+                "capabilities": ["pipeline-configuration", "container-management", "release-automation", "monitoring-setup", "secret-rotation", "deployment-gates"],
                 "required_tools": ["read_file", "list_dir", "grep_search", "apply_patch", "create_file", "run_in_terminal", "github_repo"],
                 "preferred_profile": "power",
+                "risk_level": "medium",
+            }
+        )
+
+    # Database architect for repos with a database/ORM layer
+    if tag_set & {"database", "prisma", "python", "jvm", "dotnet", "ruby", "php"}:
+        agents.append(
+            {
+                "id": f"{base_id}-database-architect",
+                "role": f"{repo_name} Database Architect",
+                "description": (
+                    f"Designs schemas, authors migrations, optimizes slow queries, and enforces "
+                    f"data-integrity constraints for {repo_name}. Runs explain-plan analysis, "
+                    "implements indexing strategies, and documents the data model."
+                ),
+                "tags": [repo_name, *tags, "database", "schema", "migrations"],
+                "capabilities": ["schema-design", "migration-authoring", "query-optimization", "index-strategy", "data-integrity-enforcement"],
+                "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
+                "preferred_profile": "balanced",
+                "risk_level": "medium",
+            }
+        )
+
+    # Performance engineer for Node, Python, JVM, Go, or Rust repos
+    if tag_set & {"node", "javascript", "python", "go", "rust", "jvm", "dotnet"}:
+        agents.append(
+            {
+                "id": f"{base_id}-performance-engineer",
+                "role": f"{repo_name} Performance Engineer",
+                "description": (
+                    f"Profiles {repo_name} to locate CPU, memory, I/O, and network bottlenecks. "
+                    "Implements caching strategies, tunes database queries, and establishes performance "
+                    "budgets with automated regression alerts in CI."
+                ),
+                "tags": [repo_name, *tags, "performance", "profiling", "optimization"],
+                "capabilities": ["profiling", "bottleneck-analysis", "caching-strategy", "query-optimization", "load-testing", "performance-budgeting"],
+                "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
+                "preferred_profile": "balanced",
                 "risk_level": "medium",
             }
         )
@@ -175,17 +293,29 @@ This repository is upgraded with AgentX capabilities for full-stack development 
 - `access_profiles.json`: safe/balanced/power profiles
 - `agency_import.json`: imported agents from agency-agents
 
-## Per-Repo Agents
+## Core Per-Repo Agents
 | Agent | Profile | Purpose |
 |-------|---------|---------|
-| `{slugify(repo_name)}-repo-architect` | safe | Architecture planning and dependency review |
+| `{slugify(repo_name)}-repo-architect` | safe | Architecture planning, ADRs, and dependency review |
 | `{slugify(repo_name)}-implementation-pilot` | balanced | Code changes, refactoring, test validation |
-| `{slugify(repo_name)}-orchestrator` | power | Multi-agent coordination and handoffs |
+| `{slugify(repo_name)}-orchestrator` | power | Multi-agent coordination and release handoffs |
 | `{slugify(repo_name)}-qa-pilot` | balanced | Test planning, unit/integration/e2e tests |
-| `{slugify(repo_name)}-devops-pilot` | power | CI/CD pipelines, containers, deployments |
+| `{slugify(repo_name)}-security-hardener` | balanced | OWASP reviews, CVE triage, secrets hygiene |
+| `{slugify(repo_name)}-documentation-pilot` | balanced | READMEs, ADRs, runbooks, API reference docs |
 
-> **Note:** The `devops-pilot` agent is only generated for repositories that contain CI/CD
-> workflows, container configuration, Kubernetes manifests, or infrastructure-as-code.
+## Conditionally Generated Agents
+| Agent | Condition | Purpose |
+|-------|-----------|---------|
+| `{slugify(repo_name)}-devops-pilot` | CI/CD, containers, or infra detected | Pipelines, containers, deployments |
+| `{slugify(repo_name)}-database-architect` | DB/ORM layer detected | Schema design, migrations, query tuning |
+| `{slugify(repo_name)}-performance-engineer` | Node/Python/Go/JVM/Rust/dotnet detected | Profiling, caching, performance budgets |
+
+## Access Profile Reference
+| Profile | Write | Network | Secrets | Use case |
+|---------|-------|---------|---------|---------|
+| safe | no | no | none | Read-only analysis and auditing |
+| balanced | yes | no | masked | Standard code changes and registry edits |
+| power | yes | yes | scoped | Cross-repo orchestration and subagent spawning |
 
 ## Suggested commands
 ```bash
@@ -193,6 +323,8 @@ agentx find {repo_name}
 agentx check {slugify(repo_name)}-implementation-pilot --profile balanced
 agentx check {slugify(repo_name)}-orchestrator --profile power
 agentx check {slugify(repo_name)}-qa-pilot --profile balanced
+agentx check {slugify(repo_name)}-security-hardener --profile balanced
+agentx check {slugify(repo_name)}-devops-pilot --profile power
 ```
 """
     (agentx_dir / "README.md").write_text(readme, encoding="utf-8")
