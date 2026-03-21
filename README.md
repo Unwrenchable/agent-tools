@@ -135,6 +135,12 @@ This means you can ship a lean base registry in the package and let each reposit
 agentx list
 ```
 
+## Knowledge Base
+
+The repository includes a knowledge base with reference materials:
+
+- [Quantitative Methods Formulas](docs/knowledge-base/quantitative-methods-formulas.md) - Comprehensive reference for CFA Level 1 quantitative methods formulas
+
 ## Next extensions
 
 - add task-based policy checks (derive needed tools from task type)
