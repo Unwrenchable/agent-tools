@@ -113,6 +113,19 @@ def detect_stack_tags(repo_path: Path) -> list[str]:
     # Documentation
     if any((repo_path / d).is_dir() for d in ("docs", "doc", "documentation")):
         tags.add("documentation")
+    # Game engines
+    if (repo_path / "project.godot").exists():
+        tags.update(["game", "godot"])
+    if any(repo_path.glob("*.uproject")):
+        tags.update(["game", "unreal"])
+    if (repo_path / "Assets").is_dir() and (repo_path / "ProjectSettings").is_dir():
+        tags.update(["game", "unity"])
+    # Generic game project indicators (design docs, gameplay source dirs, asset dirs)
+    if (repo_path / "design").is_dir():
+        if any((repo_path / d).is_dir() for d in ("src", "assets", "prototypes", "production")):
+            tags.add("game")
+    if any((repo_path / "src" / sub).is_dir() for sub in ("gameplay", "core", "ai", "networking")):
+        tags.add("game")
     if not tags:
         tags.add("general")
     return sorted(tags)
@@ -265,7 +278,167 @@ def build_custom_agents(repo_name: str, tags: list[str]) -> list[dict]:
             }
         )
 
+    # Game studio agents for game repos
+    if "game" in tag_set:
+        agents.extend(_build_game_studio_agents(base_id, repo_name, tags, tag_set))
+
     return agents
+
+
+def _build_game_studio_agents(base_id: str, repo_name: str, tags: list[str], tag_set: set[str]) -> list[dict]:
+    """Return game-studio–quality agents for repos identified as game projects."""
+    game_agents: list[dict] = [
+        {
+            "id": f"{base_id}-creative-director",
+            "role": f"{repo_name} Creative Director",
+            "description": (
+                f"Guards the creative vision, tone, and aesthetic direction of {repo_name}. "
+                "Resolves cross-discipline conflicts between design, art, narrative, and audio using "
+                "the MDA framework and player psychology. Presents 2-3 strategic options with "
+                "trade-offs for every major creative decision; final call stays with the user."
+            ),
+            "tags": [repo_name, *tags, "game", "creative", "vision", "mda"],
+            "capabilities": ["vision-guardianship", "pillar-conflict-resolution", "tone-definition", "scope-arbitration", "competitive-positioning", "reference-curation"],
+            "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file"],
+            "preferred_profile": "balanced",
+            "risk_level": "low",
+        },
+        {
+            "id": f"{base_id}-technical-director",
+            "role": f"{repo_name} Technical Director",
+            "description": (
+                f"Owns all high-level technical decisions for {repo_name}: engine architecture, "
+                "technology choices, performance budgets (frame time, memory, load times), and "
+                "technical risk management. Produces Architecture Decision Records (ADRs), evaluates "
+                "third-party libraries, and resolves cross-system technical conflicts."
+            ),
+            "tags": [repo_name, *tags, "game", "architecture", "performance", "adr"],
+            "capabilities": ["architecture-ownership", "technology-evaluation", "performance-strategy", "technical-risk-assessment", "cross-system-integration", "adr-authoring"],
+            "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
+            "preferred_profile": "balanced",
+            "risk_level": "medium",
+        },
+        {
+            "id": f"{base_id}-game-designer",
+            "role": f"{repo_name} Game Designer",
+            "description": (
+                f"Designs the rules, systems, and mechanics that define how {repo_name} plays. "
+                "Applies MDA framework (Mechanics-Dynamics-Aesthetics), Self-Determination Theory, "
+                "and Flow State Design. Maintains GDDs, defines balancing methodology (power curves, "
+                "tuning knobs), and uses the sink/faucet model for virtual economies."
+            ),
+            "tags": [repo_name, *tags, "game", "design", "mechanics", "balance", "gdd"],
+            "capabilities": ["core-loop-design", "systems-design", "balancing-framework", "player-experience-mapping", "edge-case-documentation", "gdd-authoring"],
+            "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file"],
+            "preferred_profile": "balanced",
+            "risk_level": "low",
+        },
+        {
+            "id": f"{base_id}-gameplay-programmer",
+            "role": f"{repo_name} Gameplay Programmer",
+            "description": (
+                f"Translates GDDs into clean, performant, data-driven code for {repo_name}. "
+                "Implements mechanics, player systems, and combat features with frame-rate-independent "
+                "logic, clean state machines, and all gameplay values in external config files. "
+                "Authors unit tests for all gameplay logic."
+            ),
+            "tags": [repo_name, *tags, "game", "programming", "mechanics", "data-driven"],
+            "capabilities": ["feature-implementation", "data-driven-design", "state-management", "input-handling", "system-integration", "gameplay-testing"],
+            "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
+            "preferred_profile": "balanced",
+            "risk_level": "medium",
+        },
+        {
+            "id": f"{base_id}-producer",
+            "role": f"{repo_name} Producer",
+            "description": (
+                f"Manages sprint planning, milestone tracking, and cross-team coordination for "
+                f"{repo_name}. Identifies risks early, negotiates scope cuts that protect core "
+                "game pillars, and maintains production/sprints/ and production/milestones/ documents "
+                "to keep the project on schedule and on vision."
+            ),
+            "tags": [repo_name, *tags, "game", "production", "planning", "milestones"],
+            "capabilities": ["sprint-planning", "milestone-tracking", "scope-management", "risk-identification", "cross-team-coordination", "release-coordination"],
+            "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file"],
+            "preferred_profile": "balanced",
+            "risk_level": "low",
+        },
+        {
+            "id": f"{base_id}-game-qa-lead",
+            "role": f"{repo_name} Game QA Lead",
+            "description": (
+                f"Owns test strategy, bug triage, and release quality gates for {repo_name}. "
+                "Defines per-milestone quality gates (crash rate, critical bug count, performance "
+                "benchmarks, feature completeness), triages bugs using S1-S4 severity taxonomy, "
+                "designs playtest protocols, and maintains regression suites for critical gameplay paths."
+            ),
+            "tags": [repo_name, *tags, "game", "qa", "testing", "quality-gates", "playtesting"],
+            "capabilities": ["test-strategy", "bug-triage", "quality-gates", "regression-management", "playtest-coordination", "release-readiness"],
+            "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
+            "preferred_profile": "balanced",
+            "risk_level": "medium",
+        },
+    ]
+
+    # Engine-specific specialists
+    if "godot" in tag_set:
+        game_agents.append(
+            {
+                "id": f"{base_id}-godot-specialist",
+                "role": f"{repo_name} Godot Specialist",
+                "description": (
+                    f"The authority on all Godot-specific patterns, APIs, and optimization techniques "
+                    f"for {repo_name}. Guides GDScript vs C# vs GDExtension decisions, enforces "
+                    "node/scene architecture best practices, proper signal usage, static typing, "
+                    "resource management, and object pooling. Configures export presets and autoloads."
+                ),
+                "tags": [repo_name, *tags, "game", "godot", "gdscript", "engine"],
+                "capabilities": ["godot-architecture", "gdscript-standards", "scene-design", "resource-management", "signal-patterns", "export-configuration"],
+                "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
+                "preferred_profile": "balanced",
+                "risk_level": "medium",
+            }
+        )
+
+    if "unity" in tag_set:
+        game_agents.append(
+            {
+                "id": f"{base_id}-unity-specialist",
+                "role": f"{repo_name} Unity Specialist",
+                "description": (
+                    f"The authority on Unity-specific patterns, APIs, and optimization for {repo_name}. "
+                    "Guides C# code architecture, DOTS/ECS vs MonoBehaviour decisions, Addressables "
+                    "asset management, UI Toolkit vs uGUI choices, shader/VFX Graph workflows, "
+                    "and Unity project settings for target platforms."
+                ),
+                "tags": [repo_name, *tags, "game", "unity", "csharp", "engine"],
+                "capabilities": ["unity-architecture", "ecs-dots", "addressables", "ui-toolkit", "shader-vfx", "platform-configuration"],
+                "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
+                "preferred_profile": "balanced",
+                "risk_level": "medium",
+            }
+        )
+
+    if "unreal" in tag_set:
+        game_agents.append(
+            {
+                "id": f"{base_id}-unreal-specialist",
+                "role": f"{repo_name} Unreal Engine Specialist",
+                "description": (
+                    f"The authority on Unreal Engine 5 patterns, Blueprints vs C++ decisions, "
+                    f"and optimization for {repo_name}. Guides Gameplay Ability System (GAS) "
+                    "implementation, replication/networking architecture, UMG/CommonUI patterns, "
+                    "Blueprint/C++ interop, and Nanite/Lumen configuration for target platforms."
+                ),
+                "tags": [repo_name, *tags, "game", "unreal", "ue5", "blueprints", "engine"],
+                "capabilities": ["unreal-architecture", "gameplay-ability-system", "replication", "umg-commonui", "blueprint-cpp-interop", "nanite-lumen"],
+                "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
+                "preferred_profile": "balanced",
+                "risk_level": "medium",
+            }
+        )
+
+    return game_agents
 
 
 def write_agentx_pack(repo_path: Path, repo_name: str, base_agents: list[dict], profiles: list[dict], agency_agents: list[dict]) -> None:
@@ -285,6 +458,30 @@ def write_agentx_pack(repo_path: Path, repo_name: str, base_agents: list[dict], 
     write_json(agentx_dir / "access_profiles.json", profiles)
     write_json(agentx_dir / "agency_import.json", agency_agents)
 
+    base_id = slugify(repo_name)
+    tag_set = set(tags)
+    game_readme_section = ""
+    if "game" in tag_set:
+        engine_rows = ""
+        if "godot" in tag_set:
+            engine_rows += f"| `{base_id}-godot-specialist` | game/godot detected | Godot patterns, GDScript, scene architecture |\n"
+        if "unity" in tag_set:
+            engine_rows += f"| `{base_id}-unity-specialist` | game/unity detected | Unity C#, DOTS/ECS, Addressables, UI Toolkit |\n"
+        if "unreal" in tag_set:
+            engine_rows += f"| `{base_id}-unreal-specialist` | game/unreal detected | UE5 GAS, Blueprints, replication, UMG |\n"
+
+        game_readme_section = f"""
+## Game Studio Agents
+| Agent | Profile | Purpose |
+|-------|---------|---------|
+| `{base_id}-creative-director` | balanced | Vision, MDA-based creative conflict resolution |
+| `{base_id}-technical-director` | balanced | Architecture decisions, performance budgets, ADRs |
+| `{base_id}-game-designer` | balanced | GDD authoring, systems design, balance methodology |
+| `{base_id}-gameplay-programmer` | balanced | Data-driven mechanics, state machines, gameplay tests |
+| `{base_id}-producer` | balanced | Sprint planning, milestone tracking, scope management |
+| `{base_id}-game-qa-lead` | balanced | Test strategy, S1-S4 bug triage, quality gates |
+{engine_rows}"""
+
     readme = f"""# AgentX Pack for {repo_name}
 
 This repository is upgraded with AgentX capabilities for full-stack development and deployment.
@@ -297,20 +494,20 @@ This repository is upgraded with AgentX capabilities for full-stack development 
 ## Core Per-Repo Agents
 | Agent | Profile | Purpose |
 |-------|---------|---------|
-| `{slugify(repo_name)}-repo-architect` | safe | Architecture planning, ADRs, and dependency review |
-| `{slugify(repo_name)}-implementation-pilot` | balanced | Code changes, refactoring, test validation |
-| `{slugify(repo_name)}-orchestrator` | power | Multi-agent coordination and release handoffs |
-| `{slugify(repo_name)}-qa-pilot` | balanced | Test planning, unit/integration/e2e tests |
-| `{slugify(repo_name)}-security-hardener` | balanced | OWASP reviews, CVE triage, secrets hygiene |
-| `{slugify(repo_name)}-documentation-pilot` | balanced | READMEs, ADRs, runbooks, API reference docs |
+| `{base_id}-repo-architect` | safe | Architecture planning, ADRs, and dependency review |
+| `{base_id}-implementation-pilot` | balanced | Code changes, refactoring, test validation |
+| `{base_id}-orchestrator` | power | Multi-agent coordination and release handoffs |
+| `{base_id}-qa-pilot` | balanced | Test planning, unit/integration/e2e tests |
+| `{base_id}-security-hardener` | balanced | OWASP reviews, CVE triage, secrets hygiene |
+| `{base_id}-documentation-pilot` | balanced | READMEs, ADRs, runbooks, API reference docs |
 
 ## Conditionally Generated Agents
 | Agent | Condition | Purpose |
 |-------|-----------|---------|
-| `{slugify(repo_name)}-devops-pilot` | CI/CD, containers, or infra detected | Pipelines, containers, deployments |
-| `{slugify(repo_name)}-database-architect` | DB/ORM layer detected | Schema design, migrations, query tuning |
-| `{slugify(repo_name)}-performance-engineer` | Node/Python/Go/JVM/Rust/dotnet detected | Profiling, caching, performance budgets |
-
+| `{base_id}-devops-pilot` | CI/CD, containers, or infra detected | Pipelines, containers, deployments |
+| `{base_id}-database-architect` | DB/ORM layer detected | Schema design, migrations, query tuning |
+| `{base_id}-performance-engineer` | Node/Python/Go/JVM/Rust/dotnet detected | Profiling, caching, performance budgets |
+{game_readme_section}
 ## Access Profile Reference
 | Profile | Write | Network | Secrets | Use case |
 |---------|-------|---------|---------|---------|
@@ -321,11 +518,11 @@ This repository is upgraded with AgentX capabilities for full-stack development 
 ## Suggested commands
 ```bash
 agentx find {repo_name}
-agentx check {slugify(repo_name)}-implementation-pilot --profile balanced
-agentx check {slugify(repo_name)}-orchestrator --profile power
-agentx check {slugify(repo_name)}-qa-pilot --profile balanced
-agentx check {slugify(repo_name)}-security-hardener --profile balanced
-agentx check {slugify(repo_name)}-devops-pilot --profile power
+agentx check {base_id}-implementation-pilot --profile balanced
+agentx check {base_id}-orchestrator --profile power
+agentx check {base_id}-qa-pilot --profile balanced
+agentx check {base_id}-security-hardener --profile balanced
+agentx check {base_id}-devops-pilot --profile power
 ```
 """
     (agentx_dir / "README.md").write_text(readme, encoding="utf-8")
@@ -354,7 +551,54 @@ VSCODE_SETTINGS_JSON = """\
 def write_copilot_files(repo_path: Path, repo_name: str, tags: list[str]) -> None:
     """Write .github/copilot-instructions.md and .vscode/ Copilot config files."""
     base_id = slugify(repo_name)
+    tag_set = set(tags)
     tag_list = ", ".join(f"`{t}`" for t in sorted(tags)) if tags else "`general`"
+    is_game = "game" in tag_set
+
+    game_studio_section = ""
+    if is_game:
+        engine_agent_rows = ""
+        if "godot" in tag_set:
+            engine_agent_rows += f"| `{base_id}-godot-specialist` | balanced | Godot patterns, GDScript, scene architecture, export |\n"
+        if "unity" in tag_set:
+            engine_agent_rows += f"| `{base_id}-unity-specialist` | balanced | Unity C#, DOTS/ECS, Addressables, UI Toolkit |\n"
+        if "unreal" in tag_set:
+            engine_agent_rows += f"| `{base_id}-unreal-specialist` | balanced | UE5 GAS, Blueprints, replication, UMG/CommonUI |\n"
+
+        game_studio_section = f"""
+## Game Studio Agents
+
+This is a game project. The following game-studio-quality agents are available:
+
+### Directors (Strategic)
+| Agent | Profile | Purpose |
+|-------|---------|---------|
+| `{base_id}-creative-director` | balanced | Vision guardian, MDA-based creative conflict resolution |
+| `{base_id}-technical-director` | balanced | Architecture decisions, performance budgets, ADRs |
+| `{base_id}-producer` | balanced | Sprint planning, milestone tracking, scope management |
+
+### Specialists (Tactical)
+| Agent | Profile | Purpose |
+|-------|---------|---------|
+| `{base_id}-game-designer` | balanced | GDD authoring, systems design, balance methodology |
+| `{base_id}-gameplay-programmer` | balanced | Data-driven mechanics, state machines, gameplay tests |
+| `{base_id}-game-qa-lead` | balanced | Test strategy, S1-S4 bug triage, quality gates |
+{engine_agent_rows}
+### Game Studio Workflow
+
+1. Start every feature with `{base_id}-game-designer` — design before code
+2. Use `{base_id}-creative-director` to resolve cross-discipline conflicts
+3. Use `{base_id}-technical-director` for architecture choices and ADRs
+4. Implement with `{base_id}-gameplay-programmer` — all values in config files
+5. Validate with `{base_id}-game-qa-lead` before milestone gates
+
+### Game Design Principles
+
+- **MDA Framework**: Design from target Aesthetics → Dynamics → Mechanics
+- **Data-driven values**: All gameplay numbers in `assets/data/` config files, never hardcoded
+- **Frame-rate independence**: Delta time everywhere in gameplay code
+- **Quality gates**: Crash rate, critical bug count, and perf benchmarks before every milestone
+"""
 
     instructions = f"""\
 # GitHub Copilot Custom Instructions — {repo_name}
@@ -363,8 +607,8 @@ def write_copilot_files(repo_path: Path, repo_name: str, tags: list[str]) -> Non
 
 This repository has been configured with the **AgentX** custom agent toolkit.
 Detected stack tags: {tag_list}
-
-## Available Agents
+{game_studio_section}
+## Core Agents
 
 Use the following specialized agents for development tasks in this repository:
 
