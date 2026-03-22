@@ -271,6 +271,7 @@ def build_custom_agents(repo_name: str, tags: list[str]) -> list[dict]:
 def write_agentx_pack(repo_path: Path, repo_name: str, base_agents: list[dict], profiles: list[dict], agency_agents: list[dict]) -> None:
     tags = detect_stack_tags(repo_path)
     custom_agents = build_custom_agents(repo_name, tags)
+    write_copilot_files(repo_path, repo_name, tags)
 
     merged: dict[str, dict] = {}
     for group in (base_agents, agency_agents, custom_agents):
@@ -330,6 +331,101 @@ agentx check {slugify(repo_name)}-devops-pilot --profile power
     (agentx_dir / "README.md").write_text(readme, encoding="utf-8")
 
 
+MCP_JSON = """\
+{
+  "servers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
+    }
+  }
+}
+"""
+
+VSCODE_SETTINGS_JSON = """\
+{
+  "chat.mcp.enabled": true,
+  "github.copilot.chat.agent.thinkingTool": true,
+  "github.copilot.nextEditSuggestions.enabled": true
+}
+"""
+
+
+def write_copilot_files(repo_path: Path, repo_name: str, tags: list[str]) -> None:
+    """Write .github/copilot-instructions.md and .vscode/ Copilot config files."""
+    base_id = slugify(repo_name)
+    tag_list = ", ".join(f"`{t}`" for t in sorted(tags)) if tags else "`general`"
+
+    instructions = f"""\
+# GitHub Copilot Custom Instructions — {repo_name}
+
+## Project Context
+
+This repository has been configured with the **AgentX** custom agent toolkit.
+Detected stack tags: {tag_list}
+
+## Available Agents
+
+Use the following specialized agents for development tasks in this repository:
+
+| Agent | Profile | Purpose |
+|-------|---------|---------|
+| `{base_id}-repo-architect` | safe | Architecture planning, ADRs, and dependency review |
+| `{base_id}-implementation-pilot` | balanced | Code changes, refactoring, test validation |
+| `{base_id}-orchestrator` | power | Multi-agent coordination and release handoffs |
+| `{base_id}-qa-pilot` | balanced | Test planning, unit/integration/e2e tests |
+| `{base_id}-security-hardener` | balanced | OWASP reviews, CVE triage, secrets hygiene |
+| `{base_id}-documentation-pilot` | balanced | READMEs, ADRs, runbooks, API reference docs |
+
+## AgentX CLI
+
+```bash
+agentx find {repo_name}
+agentx check {base_id}-implementation-pilot --profile balanced
+agentx check {base_id}-orchestrator --profile power
+agentx check {base_id}-security-hardener --profile balanced
+```
+
+## Access Profiles
+
+| Profile | Write | Network | Secrets | Use case |
+|---------|-------|---------|---------|----------|
+| safe | no | no | none | Read-only analysis and auditing |
+| balanced | yes | no | masked | Standard code changes |
+| power | yes | yes | scoped | Cross-repo orchestration and subagent spawning |
+
+## MCP Servers
+
+The GitHub MCP server is configured in `.vscode/mcp.json`. Use `#github` tool
+references in Copilot Chat to search issues, pull requests, and code across the
+repository.
+
+## Preferred Patterns
+
+- Prefer the least-privilege profile that satisfies the task
+- Use `safe` for read-only analysis, `balanced` for code changes, `power` only
+  when cross-repo network access or subagent spawning is required
+- Keep changes minimal, targeted, and validated before marking work complete
+"""
+
+    github_dir = repo_path / ".github"
+    github_dir.mkdir(parents=True, exist_ok=True)
+    (github_dir / "copilot-instructions.md").write_text(instructions, encoding="utf-8")
+
+    vscode_dir = repo_path / ".vscode"
+    vscode_dir.mkdir(parents=True, exist_ok=True)
+
+    mcp_path = vscode_dir / "mcp.json"
+    mcp_data = json.loads(mcp_path.read_text(encoding="utf-8")) if mcp_path.exists() else {}
+    mcp_data.setdefault("servers", {}).update(json.loads(MCP_JSON)["servers"])
+    mcp_path.write_text(json.dumps(mcp_data, indent=2) + "\n", encoding="utf-8")
+
+    settings_path = vscode_dir / "settings.json"
+    settings_data = json.loads(settings_path.read_text(encoding="utf-8")) if settings_path.exists() else {}
+    settings_data.update(json.loads(VSCODE_SETTINGS_JSON))
+    settings_path.write_text(json.dumps(settings_data, indent=2) + "\n", encoding="utf-8")
+
+
 def get_repos(owner: str, limit: int) -> list[dict]:
     payload = run(
         [
@@ -371,13 +467,13 @@ def upgrade_repo(workdir: Path, repo: dict, branch: str, base_agents: list[dict]
         if dry_run:
             return RepoResult(repo=name_with_owner, status="dry_run", message="Changes prepared locally")
 
-        run(["git", "add", ".agentx"], cwd=local_path)
+        run(["git", "add", ".agentx", ".github/copilot-instructions.md", ".vscode"], cwd=local_path)
         run(
             [
                 "git",
                 "commit",
                 "-m",
-                "feat(agentx): add custom agent pack with capability profiles",
+                "feat(agentx): add custom agent pack, Copilot instructions, and MCP config",
             ],
             cwd=local_path,
         )
@@ -388,6 +484,11 @@ def upgrade_repo(workdir: Path, repo: dict, branch: str, base_agents: list[dict]
             "- merged agent registry (core + agency import + repo-custom agents)\n"
             "- access profiles for capability governance\n"
             "- usage docs for quick agent checks\n"
+            "\n"
+            "Adds GitHub Copilot configuration:\n"
+            "- `.github/copilot-instructions.md`: repo-specific Copilot custom instructions\n"
+            "- `.vscode/mcp.json`: GitHub MCP server wired to Copilot Chat\n"
+            "- `.vscode/settings.json`: enables MCP and extended Copilot features\n"
         )
         pr_url = run(
             [
@@ -401,7 +502,7 @@ def upgrade_repo(workdir: Path, repo: dict, branch: str, base_agents: list[dict]
                 "--head",
                 branch,
                 "--title",
-                "feat: add AgentX custom agent toolkit",
+                "feat: add AgentX toolkit, Copilot instructions, and MCP config",
                 "--body",
                 body,
             ]
