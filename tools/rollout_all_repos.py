@@ -113,6 +113,13 @@ def detect_stack_tags(repo_path: Path) -> list[str]:
     # Documentation
     if any((repo_path / d).is_dir() for d in ("docs", "doc", "documentation")):
         tags.add("documentation")
+    # Browser testing frameworks
+    if (
+        any(repo_path.glob("playwright.config.*"))
+        or (repo_path / "cypress").is_dir()
+        or any(repo_path.glob("cypress.config.*"))
+    ):
+        tags.add("browser-testing")
     # Game engines
     if (repo_path / "project.godot").exists():
         tags.update(["game", "godot"])
@@ -281,6 +288,34 @@ def build_custom_agents(repo_name: str, tags: list[str]) -> list[dict]:
     # Game studio agents for game repos
     if "game" in tag_set:
         agents.extend(_build_game_studio_agents(base_id, repo_name, tags, tag_set))
+
+    # Browser test pilot for repos with Playwright or Cypress
+    if "browser-testing" in tag_set:
+        agents.append(
+            {
+                "id": f"{base_id}-browser-test-pilot",
+                "role": f"{repo_name} Browser Test Pilot",
+                "description": (
+                    f"Scans code changes (git diff) for {repo_name} to identify user-facing "
+                    "surfaces needing browser validation. Generates step-by-step test plans, "
+                    "executes them against a live browser via Playwright or Cypress, and converts "
+                    "validated flows into persistent end-to-end test suites. Integrates with CI "
+                    "via exit-code conventions and records sessions for post-mortem replay."
+                ),
+                "tags": [repo_name, *tags, "testing", "browser", "e2e", "playwright"],
+                "capabilities": [
+                    "diff-analysis",
+                    "test-plan-generation",
+                    "browser-automation",
+                    "playwright-execution",
+                    "ci-integration",
+                    "session-recording",
+                ],
+                "required_tools": ["read_file", "list_dir", "grep_search", "apply_patch", "create_file", "run_in_terminal"],
+                "preferred_profile": "balanced",
+                "risk_level": "medium",
+            }
+        )
 
     return agents
 
@@ -507,6 +542,7 @@ This repository is upgraded with AgentX capabilities for full-stack development 
 | `{base_id}-devops-pilot` | CI/CD, containers, or infra detected | Pipelines, containers, deployments |
 | `{base_id}-database-architect` | DB/ORM layer detected | Schema design, migrations, query tuning |
 | `{base_id}-performance-engineer` | Node/Python/Go/JVM/Rust/dotnet detected | Profiling, caching, performance budgets |
+| `{base_id}-browser-test-pilot` | Playwright or Cypress detected | Diff→plan→browser test automation |
 {game_readme_section}
 ## Access Profile Reference
 | Profile | Write | Network | Secrets | Use case |

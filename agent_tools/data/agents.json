@@ -147,6 +147,23 @@
     "risk_level": "low"
   },
   {
+    "id": "browser-test-engineer",
+    "role": "Browser Test Engineer",
+    "description": "Scans code changes (git diff) to identify what needs browser validation, generates AI-driven step-by-step test plans, and executes them against a live browser using Playwright. Integrates with CI pipelines via exit-code conventions, records sessions for replay, and authors persistent Playwright test suites from validated flows.",
+    "tags": ["testing", "browser", "e2e", "playwright", "qa"],
+    "capabilities": [
+      "diff-analysis",
+      "test-plan-generation",
+      "browser-automation",
+      "playwright-execution",
+      "ci-integration",
+      "session-recording"
+    ],
+    "required_tools": ["read_file", "list_dir", "grep_search", "apply_patch", "create_file", "run_in_terminal"],
+    "preferred_profile": "balanced",
+    "risk_level": "medium"
+  },
+  {
     "id": "game-creative-director",
     "role": "Game Creative Director",
     "description": "The highest-level creative authority for a game project. Guards the game vision, tone, and aesthetic direction across design, art, narrative, and audio. Resolves cross-discipline creative conflicts using MDA framework analysis and player psychology. Presents 2-3 strategic options with trade-offs before recommending; final call always stays with the user.",
