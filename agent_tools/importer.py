@@ -105,6 +105,8 @@ def _infer_required_tools(body: str, role: str) -> list[str]:
         required.add("run_in_terminal")
     if any(kw in lowered for kw in ("unit test", "integration test", "end-to-end", "e2e test", "test suite", "qa")):
         required.update({"grep_search", "run_in_terminal"})
+    if any(kw in lowered for kw in ("playwright", "cypress", "browser test", "browser automation", "browser-based", "real browser", "live browser")):
+        required.update({"grep_search", "apply_patch", "create_file", "run_in_terminal"})
     if any(kw in lowered for kw in ("fullstack", "full-stack", "full stack", "ship", "shipping")):
         required.update({"apply_patch", "create_file", "grep_search", "semantic_search", "run_in_terminal"})
 
