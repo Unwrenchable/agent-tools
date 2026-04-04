@@ -113,6 +113,17 @@ def detect_stack_tags(repo_path: Path) -> list[str]:
     # Documentation
     if any((repo_path / d).is_dir() for d in ("docs", "doc", "documentation")):
         tags.add("documentation")
+    # Solana / pump.fun tokenized-agent payments
+    if (repo_path / "package.json").exists():
+        try:
+            pkg = json.loads((repo_path / "package.json").read_text(encoding="utf-8"))
+            deps = {**pkg.get("dependencies", {}), **pkg.get("devDependencies", {})}
+            if "@pump-fun/agent-payments-sdk" in deps or any(
+                k.startswith("@solana/") for k in deps
+            ):
+                tags.add("solana")
+        except (json.JSONDecodeError, OSError):
+            pass
     # Browser testing frameworks
     if (
         any(repo_path.glob("playwright.config.*"))
@@ -314,6 +325,35 @@ def build_custom_agents(repo_name: str, tags: list[str]) -> list[dict]:
                 "required_tools": ["read_file", "list_dir", "grep_search", "apply_patch", "create_file", "run_in_terminal"],
                 "preferred_profile": "balanced",
                 "risk_level": "medium",
+            }
+        )
+
+    # Solana payment engineer for repos using @pump-fun/agent-payments-sdk or @solana packages
+    if "solana" in tag_set:
+        agents.append(
+            {
+                "id": f"{base_id}-solana-payment-engineer",
+                "role": f"{repo_name} Solana Payment Engineer",
+                "description": (
+                    f"Builds and verifies on-chain payment flows for tokenized agents in {repo_name} "
+                    "using the @pump-fun/agent-payments-sdk. Constructs Solana payment instructions, "
+                    "serializes unsigned transactions for client signing, verifies on-chain invoice "
+                    "payments server-side, and integrates Solana wallet adapters. Enforces the "
+                    "mandatory pre-flight checklist and all safety rules: never logs key material, "
+                    "never signs on behalf of users, always validates server-side."
+                ),
+                "tags": [repo_name, *tags, "solana", "web3", "payments", "pump-fun", "blockchain"],
+                "capabilities": [
+                    "payment-instruction-building",
+                    "invoice-verification",
+                    "wallet-adapter-integration",
+                    "transaction-serialization",
+                    "on-chain-validation",
+                    "solana-rpc-integration",
+                ],
+                "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
+                "preferred_profile": "balanced",
+                "risk_level": "high",
             }
         )
 
@@ -543,6 +583,7 @@ This repository is upgraded with AgentX capabilities for full-stack development 
 | `{base_id}-database-architect` | DB/ORM layer detected | Schema design, migrations, query tuning |
 | `{base_id}-performance-engineer` | Node/Python/Go/JVM/Rust/dotnet detected | Profiling, caching, performance budgets |
 | `{base_id}-browser-test-pilot` | Playwright or Cypress detected | Diff→plan→browser test automation |
+| `{base_id}-solana-payment-engineer` | @pump-fun/agent-payments-sdk or @solana/* detected | Solana invoice building, on-chain verification |
 {game_readme_section}
 ## Access Profile Reference
 | Profile | Write | Network | Secrets | Use case |

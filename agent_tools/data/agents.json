@@ -214,6 +214,23 @@
     "risk_level": "low"
   },
   {
+    "id": "solana-payment-engineer",
+    "role": "Solana Payment Engineer",
+    "description": "Builds and verifies on-chain payment flows for tokenized agents using the @pump-fun/agent-payments-sdk. Constructs Solana payment instructions, serializes unsigned transactions for client signing, verifies on-chain invoice payments server-side, and integrates Solana wallet adapters. Enforces the mandatory pre-flight checklist (mint address, currency, amount, RPC URL, framework) and all safety rules: never logs key material, never signs on behalf of users, always validates server-side.",
+    "tags": ["solana", "web3", "payments", "pump-fun", "blockchain", "nft"],
+    "capabilities": [
+      "payment-instruction-building",
+      "invoice-verification",
+      "wallet-adapter-integration",
+      "transaction-serialization",
+      "on-chain-validation",
+      "solana-rpc-integration"
+    ],
+    "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
+    "preferred_profile": "balanced",
+    "risk_level": "high"
+  },
+  {
     "id": "game-qa-lead",
     "role": "Game QA Lead",
     "description": "Owns test strategy, bug triage, release quality gates, and testing process design for game projects. Defines quality gates per milestone (crash rate, critical bug count, performance benchmarks, feature completeness), evaluates bugs by severity (S1-S4 taxonomy), coordinates playtests, and maintains regression suites covering critical gameplay paths.",
