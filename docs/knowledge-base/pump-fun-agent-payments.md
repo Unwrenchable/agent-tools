@@ -166,6 +166,8 @@ if (accountInfo !== null) {
 
 ```typescript
 function generateInvoiceParams() {
+  // Memo must be a unique positive integer. The range [100000, ~900 billion]
+  // avoids small values that could collide with reserved or trivially-guessable IDs.
   const memo = Math.floor(Math.random() * 900000000000) + 100000;
   const now = Math.floor(Date.now() / 1000);
   return { amount: 1000000, memo, startTime: now, endTime: now + 86400 };
