@@ -1,0 +1,22 @@
+{
+  "name": "Feature Development Workflow",
+  "description": "Complete workflow for developing a new API feature",
+  "steps": [
+    {
+      "agent_id": "api-designer",
+      "task": "Design REST API endpoints for user profile management including authentication, CRUD operations, and data validation"
+    },
+    {
+      "agent_id": "backend-engineer",
+      "task": "Implement the user profile API endpoints with proper error handling, input validation, and database integration"
+    },
+    {
+      "agent_id": "qa-engineer",
+      "task": "Create comprehensive test suite for user profile API including unit tests, integration tests, and edge cases"
+    },
+    {
+      "agent_id": "documentation-specialist",
+      "task": "Write API documentation including endpoint descriptions, request/response examples, and authentication requirements"
+    }
+  ]
+}

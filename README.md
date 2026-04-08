@@ -5,17 +5,28 @@ Reusable toolkit for managing AI agents across repositories with:
 - **Quick access** to agent registry (`list`, `find`)
 - **Smarter capability checks** (required tools vs granted tools)
 - **Safer expanded access** via profile-based permissions (`safe`, `balanced`, `power`)
+- **Real-time execution tracking** with live web dashboard
+- **Workflow orchestration** for multi-agent collaboration
 
 This project is inspired by multi-agent structure patterns (clear roles, workflows, and success criteria) and turns those ideas into a practical CLI you can use in your own ecosystem of repos.
 
 ## What you get
 
+### Agent Management
 - `agentx list`: see all registered agents
 - `agentx find <query>`: quick lookup by role/tag/capability
 - `agentx check <agent_id> [--profile ...]`: validate access fit
 - `agentx recommend <agent_id>`: least-friction profile recommendation
 - `agentx export --json`: export registry for automation pipelines
 - `agentx import-agency <path>`: import markdown agents from agency-style repos
+
+### Real-Time Execution
+- `agentx serve`: launch web dashboard with live visualization
+- `agentx run <agent_id> <task>`: execute an agent with a task
+- `agentx workflow --file <json>`: run multi-agent workflows
+- `agentx status`: monitor execution history and active tasks
+
+**🎯 New:** Real-time agent execution tracking with visual dashboard! See [Real-Time Execution Guide](docs/REAL_TIME_EXECUTION.md) for details.
 
 ## Install
 
@@ -33,12 +44,20 @@ python -m agent_tools.cli <command>
 
 ## Quick start
 
+### Basic Commands
 ```bash
+# List and search agents
 python -m agent_tools.cli list
 python -m agent_tools.cli find orchestrator
+
+# Validate agent access
 python -m agent_tools.cli check orchestrator --profile safe
 python -m agent_tools.cli recommend implementation-engineer
+
+# Export registry
 python -m agent_tools.cli export --json
+
+# Import agents from other repos
 python -m agent_tools.cli import-agency ~/code/agency-agents --output ./agency_import.json
 python -m agent_tools.cli import-agency ~/code/agency-agents --merge
 
@@ -46,6 +65,25 @@ python -m agent_tools.cli import-agency ~/code/agency-agents --merge
 git clone --depth 1 https://github.com/msitarzewski/agency-agents.git /tmp/agency-agents
 python -m agent_tools.cli import-agency /tmp/agency-agents --merge
 ```
+
+### Real-Time Execution & Dashboard
+
+```bash
+# Start the web dashboard
+python -m agent_tools.cli serve
+# Open http://127.0.0.1:7070 to see live agent activity
+
+# Execute a single agent
+python -m agent_tools.cli run backend-engineer "Implement user authentication API" --watch
+
+# Run a workflow of multiple agents
+python -m agent_tools.cli workflow --file examples/workflow-feature-dev.json
+
+# Check execution status
+python -m agent_tools.cli status --active
+```
+
+See the [Real-Time Execution Guide](docs/REAL_TIME_EXECUTION.md) for comprehensive examples and architecture workflows.
 
 ## Access model
 

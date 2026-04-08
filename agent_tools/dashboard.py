@@ -26,6 +26,7 @@ from socketserver import ThreadingMixIn
 from urllib.parse import urlparse
 
 from .registry import load_agents, load_profiles
+from .runtime import ExecutionEvent, get_runtime
 
 # ---------------------------------------------------------------------------
 # Activity simulation
@@ -91,6 +92,7 @@ class _EventBus:
 
 
 _bus = _EventBus()
+_simulation_enabled = True  # Can be toggled when real executions are active
 
 #: Seconds between consecutive agent dispatch events (min, max).
 _MIN_DISPATCH_INTERVAL: float = 1.5
@@ -101,10 +103,26 @@ _MIN_TASK_DURATION: float = 0.8
 _MAX_TASK_DURATION: float = 3.5
 
 
+def _runtime_event_handler(event: ExecutionEvent) -> None:
+    """Handle runtime execution events and forward to dashboard bus."""
+    # Convert runtime event to dashboard event format
+    dashboard_event = {
+        "type": event.event_type,
+        "agent_id": event.agent_id,
+        "ts": event.timestamp.split("T")[1].split(".")[0] if "T" in event.timestamp else event.timestamp,
+        **event.data,
+    }
+    _bus.publish(dashboard_event)
+
+
 def _simulation_loop(agents: dict) -> None:
     """Randomly dispatch and complete agents to simulate live activity."""
     agent_ids = list(agents.keys())
     while True:
+        # Skip simulation if disabled (real executions active)
+        if not _simulation_enabled:
+            time.sleep(2)
+            continue
         time.sleep(random.uniform(_MIN_DISPATCH_INTERVAL, _MAX_DISPATCH_INTERVAL))
         agent_id = random.choice(agent_ids)
         agent = agents[agent_id]
@@ -280,12 +298,24 @@ class DashboardHandler(BaseHTTPRequestHandler):
             "/api/profiles": self._serve_profiles,
             "/api/graph": self._serve_graph,
             "/api/events": self._serve_sse,
+            "/api/executions": self._serve_executions,
+            "/api/executions/active": self._serve_active_executions,
         }
         handler = routes.get(path)
         if handler is None:
             self.send_error(404)
             return
         handler()
+
+    def do_POST(self) -> None:
+        path = urlparse(self.path).path.rstrip("/") or "/"
+
+        if path == "/api/execute":
+            self._handle_execute()
+        elif path == "/api/simulation/toggle":
+            self._handle_toggle_simulation()
+        else:
+            self.send_error(404)
 
     # ── Route handlers ───────────────────────────────────────────────────────
 
@@ -342,6 +372,64 @@ class DashboardHandler(BaseHTTPRequestHandler):
         finally:
             _bus.unsubscribe(q)
 
+    def _serve_executions(self) -> None:
+        runtime = get_runtime()
+        executions = runtime.get_recent_executions(limit=50)
+        self._json_response([e.to_dict() for e in executions])
+
+    def _serve_active_executions(self) -> None:
+        runtime = get_runtime()
+        executions = runtime.get_active_executions()
+        self._json_response([e.to_dict() for e in executions])
+
+    def _handle_execute(self) -> None:
+        """Handle POST request to execute an agent."""
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length)
+            data = json.loads(body.decode("utf-8"))
+
+            agent_id = data.get("agent_id")
+            task = data.get("task", "")
+
+            if not agent_id:
+                self.send_error(400, "Missing agent_id")
+                return
+
+            agents = self.server.agents  # type: ignore[attr-defined]
+            agent = agents.get(agent_id)
+            if not agent:
+                self.send_error(404, f"Agent not found: {agent_id}")
+                return
+
+            # Create execution
+            runtime = get_runtime()
+            execution_id = runtime.create_execution(
+                agent_id=agent_id,
+                agent_role=agent.role,
+                task=task,
+                metadata={
+                    "risk_level": agent.risk_level,
+                    "profile": agent.preferred_profile,
+                },
+            )
+
+            # Start execution immediately (in real implementation,
+            # this would be async or delegated to a worker)
+            runtime.start_execution(execution_id)
+
+            # Return execution ID
+            self._json_response({"execution_id": execution_id, "status": "started"})
+
+        except Exception as e:
+            self.send_error(500, str(e))
+
+    def _handle_toggle_simulation(self) -> None:
+        """Toggle simulation mode on/off."""
+        global _simulation_enabled
+        _simulation_enabled = not _simulation_enabled
+        self._json_response({"simulation_enabled": _simulation_enabled})
+
     # ── Helpers ──────────────────────────────────────────────────────────────
 
     def _json_response(self, data: object) -> None:
@@ -359,7 +447,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
 # ---------------------------------------------------------------------------
 
 
-def serve(host: str = "127.0.0.1", port: int = 7070) -> None:
+def serve(host: str = "127.0.0.1", port: int = 7070, enable_simulation: bool = True) -> None:
     """Start the AgentX dashboard HTTP server.
 
     Parameters
@@ -368,11 +456,22 @@ def serve(host: str = "127.0.0.1", port: int = 7070) -> None:
         Interface to bind to.  Defaults to ``127.0.0.1``.
     port:
         Port to listen on.  Defaults to ``7070``.
+    enable_simulation:
+        Enable simulated activity when no real executions are running.
+        Defaults to ``True``.
     """
+    global _simulation_enabled
+    _simulation_enabled = enable_simulation
+
     agents = load_agents()
     profiles = load_profiles()
     graph_data = build_graph_data(agents, profiles)
 
+    # Subscribe to real execution events
+    runtime = get_runtime()
+    runtime.subscribe(_runtime_event_handler)
+
+    # Start simulation loop (will pause when real executions are active)
     threading.Thread(
         target=_simulation_loop,
         args=(agents,),
