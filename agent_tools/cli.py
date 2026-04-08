@@ -4,6 +4,7 @@ import argparse
 import json
 from dataclasses import asdict
 
+from .dashboard import serve as _serve_dashboard
 from .importer import import_agency_agents, merge_into_registry, write_json
 from .registry import (
     assess_agent_access,
@@ -56,6 +57,10 @@ def _build_parser() -> argparse.ArgumentParser:
         default="agent_tools/data/agents.json",
         help="registry JSON path used when --merge is set",
     )
+
+    serve_parser = sub.add_parser("serve", help="Launch the AgentX web dashboard")
+    serve_parser.add_argument("--host", default="127.0.0.1", help="bind address (default: 127.0.0.1)")
+    serve_parser.add_argument("--port", type=int, default=7070, help="port to listen on (default: 7070)")
 
     return parser
 
@@ -166,6 +171,11 @@ def cmd_import_agency(source: str, output: str, merge: bool, merge_target: str) 
     return 0
 
 
+def cmd_serve(host: str, port: int) -> int:
+    _serve_dashboard(host=host, port=port)
+    return 0
+
+
 def main() -> int:
     parser = _build_parser()
     args = parser.parse_args()
@@ -182,6 +192,8 @@ def main() -> int:
         return cmd_export(args.json)
     if args.command == "import-agency":
         return cmd_import_agency(args.source, args.output, args.merge, args.merge_target)
+    if args.command == "serve":
+        return cmd_serve(args.host, args.port)
 
     parser.print_help()
     return 1
