@@ -164,3 +164,86 @@ If push/PR fails because token lacks write scope, fix GitHub auth and rerun only
 ```bash
 python tools/retry_rollout_pushes.py --summary /tmp/agentx_rollout_summary.json --workdir /tmp/agentx-rollout
 ```
+
+## Repo security hardening rollout
+
+Harden all your repos in one command. Adds standard security files via PR and
+applies GitHub repo settings (branch protection, Actions permissions, security
+features) via the GitHub API.
+
+### Quick start
+
+```bash
+# Dry-run first (default — no changes made)
+python tools/harden_repos.py --owner Unwrenchable --hardening-all
+
+# Apply everything: file PRs + settings
+python tools/harden_repos.py --owner Unwrenchable --hardening-all --apply
+
+# File PRs only (no API settings changes)
+python tools/harden_repos.py --owner Unwrenchable --hardening-files --apply
+
+# API settings only (no file PRs)
+python tools/harden_repos.py --owner Unwrenchable --hardening-settings --apply
+
+# Target specific repos
+python tools/harden_repos.py --owner Unwrenchable --hardening-all --apply \
+  --repos my-repo-1 my-repo-2
+```
+
+Output is a JSON summary with per-repo status, PR URLs, and settings applied/skipped/errors.
+
+### What gets added per repo (file PR)
+
+| File | Purpose |
+|------|---------|
+| `SECURITY.md` | Private vulnerability reporting, supported versions, disclosure policy |
+| `.github/CODEOWNERS` | Enforces owner review on workflows, lockfiles, release configs |
+| `.github/dependabot.yml` | Automated updates for detected ecosystems + GitHub Actions |
+| `.github/pull_request_template.md` | Security checklist: deps, workflows, secrets, tests |
+| `.github/workflows/security.yml` | Dependency review + Gitleaks secret scan (configurable) |
+| `LICENSE` | Non-commercial source license (or dual-license if configured) |
+| `README.md` | License summary section added/updated |
+
+### Repo settings applied (API)
+
+| Setting | Value |
+|---------|-------|
+| Branch protection | PRs required, 1 approval, dismiss stale reviews, require conversation resolution |
+| Actions permissions | Default workflow token set to `read` (least privilege) |
+| Dependabot alerts | Enabled |
+| Dependabot security updates | Enabled |
+| Secret scanning + push protection | Enabled (requires GitHub Advanced Security; errors reported gracefully) |
+
+### Policy configuration (`policy.json`)
+
+Customize hardening behavior by editing `policy.json` at the repo root:
+
+```json
+{
+  "license_mode": "non-commercial",
+  "license_contact": "your@email.com",
+  "approvals_required": 1,
+  "dependabot_schedule": "weekly",
+  "security_workflow": true,
+  "branch_protection": {
+    "require_pr": true,
+    "approvals_required": 1,
+    "dismiss_stale_reviews": true,
+    "require_conversation_resolution": true
+  }
+}
+```
+
+**`license_mode`** options:
+- `"non-commercial"` (default) — non-commercial source-available license
+- `"dual"` — dual-license scaffold (non-commercial public + commercial by contact)
+
+Pass a custom policy file path with `--policy /path/to/policy.json`.
+
+### Running tests
+
+```bash
+pip install -e ".[dev]"
+python -m pytest
+```

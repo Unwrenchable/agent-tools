@@ -9,6 +9,9 @@ dependencies = []
 [project.scripts]
 agentx = "agent_tools.cli:main"
 
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
 [build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
@@ -18,3 +21,6 @@ packages = ["agent_tools"]
 
 [tool.setuptools.package-data]
 agent_tools = ["data/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
