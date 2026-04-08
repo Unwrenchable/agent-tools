@@ -92,12 +92,20 @@ class _EventBus:
 
 _bus = _EventBus()
 
+#: Seconds between consecutive agent dispatch events (min, max).
+_MIN_DISPATCH_INTERVAL: float = 1.5
+_MAX_DISPATCH_INTERVAL: float = 4.0
+
+#: Simulated task duration range in seconds (min, max).
+_MIN_TASK_DURATION: float = 0.8
+_MAX_TASK_DURATION: float = 3.5
+
 
 def _simulation_loop(agents: dict) -> None:
     """Randomly dispatch and complete agents to simulate live activity."""
     agent_ids = list(agents.keys())
     while True:
-        time.sleep(random.uniform(1.5, 4.0))
+        time.sleep(random.uniform(_MIN_DISPATCH_INTERVAL, _MAX_DISPATCH_INTERVAL))
         agent_id = random.choice(agent_ids)
         agent = agents[agent_id]
         task = random.choice(_TASK_DESCRIPTIONS)
@@ -114,7 +122,7 @@ def _simulation_loop(agents: dict) -> None:
         )
 
         def _complete(aid: str = agent_id) -> None:
-            time.sleep(random.uniform(0.8, 3.5))
+            time.sleep(random.uniform(_MIN_TASK_DURATION, _MAX_TASK_DURATION))
             _bus.publish(
                 {
                     "type": "complete",
@@ -172,14 +180,14 @@ _WORKFLOWS: list[dict] = [
 ]
 
 
-def build_graph_data(agents: dict, profiles: dict) -> dict:  # noqa: ARG001
+def build_graph_data(agents: dict, _profiles: dict) -> dict:  # noqa: ARG001
     """Return nodes, edges, and workflow metadata for the dashboard graph.
 
     Parameters
     ----------
     agents:
         Mapping of agent id → :class:`~agent_tools.models.AgentDefinition`.
-    profiles:
+    _profiles:
         Mapping of profile name → :class:`~agent_tools.models.AccessProfile`
         (unused at present; reserved for future profile-overlay edges).
 
@@ -260,7 +268,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
     """Request handler for the AgentX dashboard."""
 
     # silence default request logging
-    def log_message(self, fmt: str, *args: object) -> None:  # noqa: ARG002
+    def log_message(self, _fmt: str, *_args: object) -> None:
         pass
 
     def do_GET(self) -> None:

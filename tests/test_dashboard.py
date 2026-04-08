@@ -157,7 +157,7 @@ def _start_test_server() -> tuple[_ThreadingHTTPServer, int]:
 
 
 @pytest.fixture(scope="module")
-def test_server():
+def dashboard_server():
     server, port = _start_test_server()
     yield port
     server.shutdown()
@@ -165,8 +165,8 @@ def test_server():
 
 
 class TestDashboardRoutes:
-    def test_root_returns_html(self, test_server: int) -> None:
-        conn = HTTPConnection("127.0.0.1", test_server)
+    def test_root_returns_html(self, dashboard_server: int) -> None:
+        conn = HTTPConnection("127.0.0.1", dashboard_server)
         conn.request("GET", "/")
         resp = conn.getresponse()
         assert resp.status == 200
@@ -177,8 +177,8 @@ class TestDashboardRoutes:
         assert b"<!DOCTYPE html>" in body.lower() or b"<!doctype html>" in body.lower()
         conn.close()
 
-    def test_api_agents_returns_json_array(self, test_server: int) -> None:
-        conn = HTTPConnection("127.0.0.1", test_server)
+    def test_api_agents_returns_json_array(self, dashboard_server: int) -> None:
+        conn = HTTPConnection("127.0.0.1", dashboard_server)
         conn.request("GET", "/api/agents")
         resp = conn.getresponse()
         assert resp.status == 200
@@ -189,8 +189,8 @@ class TestDashboardRoutes:
         assert "id" in data[0]
         conn.close()
 
-    def test_api_profiles_returns_json_array(self, test_server: int) -> None:
-        conn = HTTPConnection("127.0.0.1", test_server)
+    def test_api_profiles_returns_json_array(self, dashboard_server: int) -> None:
+        conn = HTTPConnection("127.0.0.1", dashboard_server)
         conn.request("GET", "/api/profiles")
         resp = conn.getresponse()
         assert resp.status == 200
@@ -200,8 +200,8 @@ class TestDashboardRoutes:
         assert "name" in data[0]
         conn.close()
 
-    def test_api_graph_returns_nodes_and_edges(self, test_server: int) -> None:
-        conn = HTTPConnection("127.0.0.1", test_server)
+    def test_api_graph_returns_nodes_and_edges(self, dashboard_server: int) -> None:
+        conn = HTTPConnection("127.0.0.1", dashboard_server)
         conn.request("GET", "/api/graph")
         resp = conn.getresponse()
         assert resp.status == 200
@@ -211,17 +211,17 @@ class TestDashboardRoutes:
         assert "workflows" in data
         conn.close()
 
-    def test_unknown_route_returns_404(self, test_server: int) -> None:
-        conn = HTTPConnection("127.0.0.1", test_server)
+    def test_unknown_route_returns_404(self, dashboard_server: int) -> None:
+        conn = HTTPConnection("127.0.0.1", dashboard_server)
         conn.request("GET", "/not-a-real-path")
         resp = conn.getresponse()
         assert resp.status == 404
         conn.close()
 
-    def test_api_events_begins_with_connected(self, test_server: int) -> None:
+    def test_api_events_begins_with_connected(self, dashboard_server: int) -> None:
         import socket as _socket
 
-        s = _socket.create_connection(("127.0.0.1", test_server), timeout=5)
+        s = _socket.create_connection(("127.0.0.1", dashboard_server), timeout=5)
         s.sendall(b"GET /api/events HTTP/1.0\r\nHost: localhost\r\n\r\n")
         data = b""
         s.settimeout(5)
@@ -234,9 +234,9 @@ class TestDashboardRoutes:
         assert b"text/event-stream" in data
         assert b"connected" in data
 
-    def test_cors_header_on_json_endpoints(self, test_server: int) -> None:
+    def test_cors_header_on_json_endpoints(self, dashboard_server: int) -> None:
         for path in ("/api/agents", "/api/profiles", "/api/graph"):
-            conn = HTTPConnection("127.0.0.1", test_server)
+            conn = HTTPConnection("127.0.0.1", dashboard_server)
             conn.request("GET", path)
             resp = conn.getresponse()
             assert resp.getheader("Access-Control-Allow-Origin") == "*", path
