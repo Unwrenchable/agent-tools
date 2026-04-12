@@ -1,0 +1,36 @@
+{
+  "license_mode": "non-commercial",
+  "license_contact": "",
+  "approvals_required": 1,
+  "codeowners_protected_paths": [
+    ".github/workflows/**",
+    "package-lock.json",
+    "yarn.lock",
+    "pnpm-lock.yaml",
+    "Pipfile.lock",
+    "poetry.lock",
+    "Cargo.lock",
+    "go.sum",
+    "composer.lock",
+    "Gemfile.lock",
+    "Package.resolved",
+    ".releaserc",
+    ".releaserc.json",
+    ".releaserc.yml",
+    ".releaserc.yaml",
+    ".releaserc.js",
+    "release.config.js",
+    "release.config.ts",
+    ".github/workflows/release*.yml",
+    ".github/workflows/publish*.yml",
+    ".github/workflows/deploy*.yml"
+  ],
+  "dependabot_schedule": "weekly",
+  "security_workflow": true,
+  "branch_protection": {
+    "require_pr": true,
+    "approvals_required": 1,
+    "dismiss_stale_reviews": true,
+    "require_conversation_resolution": true
+  }
+}

@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 from dataclasses import asdict
 
+from .dashboard import serve as _serve_dashboard
+from .executor import execute_agent_task, execute_workflow
 from .importer import import_agency_agents, merge_into_registry, write_json
 from .registry import (
     assess_agent_access,
@@ -12,6 +15,7 @@ from .registry import (
     load_profiles,
     recommend_profile,
 )
+from .runtime import get_runtime
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -56,6 +60,24 @@ def _build_parser() -> argparse.ArgumentParser:
         default="agent_tools/data/agents.json",
         help="registry JSON path used when --merge is set",
     )
+
+    serve_parser = sub.add_parser("serve", help="Launch the AgentX web dashboard")
+    serve_parser.add_argument("--host", default="127.0.0.1", help="bind address (default: 127.0.0.1)")
+    serve_parser.add_argument("--port", type=int, default=7070, help="port to listen on (default: 7070)")
+    serve_parser.add_argument("--no-simulation", action="store_true", help="disable simulated activity")
+
+    run_parser = sub.add_parser("run", help="Execute an agent with a task")
+    run_parser.add_argument("agent_id", help="agent identifier")
+    run_parser.add_argument("task", help="task description for the agent")
+    run_parser.add_argument("--watch", action="store_true", help="watch execution progress")
+
+    workflow_parser = sub.add_parser("workflow", help="Execute a workflow of multiple agents")
+    workflow_parser.add_argument("--file", required=True, help="JSON file with workflow definition")
+    workflow_parser.add_argument("--parallel", action="store_true", help="execute agents concurrently")
+
+    status_parser = sub.add_parser("status", help="Show execution status")
+    status_parser.add_argument("--active", action="store_true", help="show only active executions")
+    status_parser.add_argument("--limit", type=int, default=10, help="number of recent executions to show")
 
     return parser
 
@@ -166,6 +188,116 @@ def cmd_import_agency(source: str, output: str, merge: bool, merge_target: str) 
     return 0
 
 
+def cmd_serve(host: str, port: int, no_simulation: bool) -> int:
+    _serve_dashboard(host=host, port=port, enable_simulation=not no_simulation)
+    return 0
+
+
+def cmd_run(agent_id: str, task: str, watch: bool) -> int:
+    """Execute an agent with a task."""
+    print(f"Executing agent: {agent_id}")
+    print(f"Task: {task}")
+
+    try:
+        execution_id = execute_agent_task(agent_id, task)
+        print(f"Execution ID: {execution_id}")
+
+        if watch:
+            print("\nWatching execution...")
+            runtime = get_runtime()
+            last_status = None
+
+            while True:
+                execution = runtime.get_execution(execution_id)
+                if not execution:
+                    print("Execution not found")
+                    return 1
+
+                if execution.status.value != last_status:
+                    print(f"Status: {execution.status.value}")
+                    last_status = execution.status.value
+
+                if execution.status.value in ("completed", "failed", "cancelled"):
+                    if execution.status.value == "completed":
+                        print(f"\n✓ Completed in {execution.duration_ms}ms")
+                        if execution.result:
+                            print(f"Result: {json.dumps(execution.result, indent=2)}")
+                        return 0
+                    else:
+                        print(f"\n✗ Failed: {execution.error}")
+                        return 1
+
+                time.sleep(0.5)
+
+        return 0
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return 1
+
+
+def cmd_workflow(file: str, parallel: bool) -> int:
+    """Execute a workflow from a JSON file."""
+    try:
+        with open(file) as f:
+            workflow_def = json.load(f)
+
+        workflow = [(step["agent_id"], step["task"]) for step in workflow_def["steps"]]
+
+        print(f"Executing workflow with {len(workflow)} steps")
+        if parallel:
+            print("Mode: parallel")
+        else:
+            print("Mode: sequential")
+
+        execution_ids = execute_workflow(workflow, sequential=not parallel)
+
+        print(f"\nStarted {len(execution_ids)} executions:")
+        for i, exec_id in enumerate(execution_ids):
+            print(f"  {i + 1}. {exec_id}")
+
+        return 0
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return 1
+
+
+def cmd_status(active: bool, limit: int) -> int:
+    """Show execution status."""
+    runtime = get_runtime()
+
+    if active:
+        executions = runtime.get_active_executions()
+        print(f"Active executions: {len(executions)}")
+    else:
+        executions = runtime.get_recent_executions(limit=limit)
+        print(f"Recent executions (limit {limit}):")
+
+    if not executions:
+        print("No executions found")
+        return 0
+
+    print()
+    for execution in executions:
+        duration = f"{execution.duration_ms}ms" if execution.duration_ms else "running"
+        status_icon = {
+            "completed": "✓",
+            "failed": "✗",
+            "running": "→",
+            "queued": "·",
+            "cancelled": "○",
+        }.get(execution.status.value, "?")
+
+        print(f"{status_icon} {execution.id[:8]} | {execution.agent_id:20} | {execution.status.value:10} | {duration:10}")
+        print(f"  Task: {execution.task[:60]}{'...' if len(execution.task) > 60 else ''}")
+        if execution.error:
+            print(f"  Error: {execution.error}")
+        print()
+
+    return 0
+
+
 def main() -> int:
     parser = _build_parser()
     args = parser.parse_args()
@@ -182,6 +314,14 @@ def main() -> int:
         return cmd_export(args.json)
     if args.command == "import-agency":
         return cmd_import_agency(args.source, args.output, args.merge, args.merge_target)
+    if args.command == "serve":
+        return cmd_serve(args.host, args.port, args.no_simulation)
+    if args.command == "run":
+        return cmd_run(args.agent_id, args.task, args.watch)
+    if args.command == "workflow":
+        return cmd_workflow(args.file, args.parallel)
+    if args.command == "status":
+        return cmd_status(args.active, args.limit)
 
     parser.print_help()
     return 1

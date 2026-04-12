@@ -1,0 +1,18 @@
+{
+  "name": "Security Review Workflow",
+  "description": "Comprehensive security audit and hardening workflow",
+  "steps": [
+    {
+      "agent_id": "repo-auditor",
+      "task": "Audit repository for security vulnerabilities, exposed secrets, and dependency issues"
+    },
+    {
+      "agent_id": "cybersecurity-expert",
+      "task": "Perform penetration testing and identify potential attack vectors in the application"
+    },
+    {
+      "agent_id": "capability-guardian",
+      "task": "Review agent access profiles and ensure least-privilege principle is enforced across all agents"
+    }
+  ]
+}

@@ -5,17 +5,28 @@ Reusable toolkit for managing AI agents across repositories with:
 - **Quick access** to agent registry (`list`, `find`)
 - **Smarter capability checks** (required tools vs granted tools)
 - **Safer expanded access** via profile-based permissions (`safe`, `balanced`, `power`)
+- **Real-time execution tracking** with live web dashboard
+- **Workflow orchestration** for multi-agent collaboration
 
 This project is inspired by multi-agent structure patterns (clear roles, workflows, and success criteria) and turns those ideas into a practical CLI you can use in your own ecosystem of repos.
 
 ## What you get
 
+### Agent Management
 - `agentx list`: see all registered agents
 - `agentx find <query>`: quick lookup by role/tag/capability
 - `agentx check <agent_id> [--profile ...]`: validate access fit
 - `agentx recommend <agent_id>`: least-friction profile recommendation
 - `agentx export --json`: export registry for automation pipelines
 - `agentx import-agency <path>`: import markdown agents from agency-style repos
+
+### Real-Time Execution
+- `agentx serve`: launch web dashboard with live visualization
+- `agentx run <agent_id> <task>`: execute an agent with a task
+- `agentx workflow --file <json>`: run multi-agent workflows
+- `agentx status`: monitor execution history and active tasks
+
+**🎯 New:** Real-time agent execution tracking with visual dashboard! See [Real-Time Execution Guide](docs/REAL_TIME_EXECUTION.md) for details.
 
 ## Install
 
@@ -33,12 +44,20 @@ python -m agent_tools.cli <command>
 
 ## Quick start
 
+### Basic Commands
 ```bash
+# List and search agents
 python -m agent_tools.cli list
 python -m agent_tools.cli find orchestrator
+
+# Validate agent access
 python -m agent_tools.cli check orchestrator --profile safe
 python -m agent_tools.cli recommend implementation-engineer
+
+# Export registry
 python -m agent_tools.cli export --json
+
+# Import agents from other repos
 python -m agent_tools.cli import-agency ~/code/agency-agents --output ./agency_import.json
 python -m agent_tools.cli import-agency ~/code/agency-agents --merge
 
@@ -46,6 +65,25 @@ python -m agent_tools.cli import-agency ~/code/agency-agents --merge
 git clone --depth 1 https://github.com/msitarzewski/agency-agents.git /tmp/agency-agents
 python -m agent_tools.cli import-agency /tmp/agency-agents --merge
 ```
+
+### Real-Time Execution & Dashboard
+
+```bash
+# Start the web dashboard
+python -m agent_tools.cli serve
+# Open http://127.0.0.1:7070 to see live agent activity
+
+# Execute a single agent
+python -m agent_tools.cli run backend-engineer "Implement user authentication API" --watch
+
+# Run a workflow of multiple agents
+python -m agent_tools.cli workflow --file examples/workflow-feature-dev.json
+
+# Check execution status
+python -m agent_tools.cli status --active
+```
+
+See the [Real-Time Execution Guide](docs/REAL_TIME_EXECUTION.md) for comprehensive examples and architecture workflows.
 
 ## Access model
 
@@ -163,4 +201,87 @@ If push/PR fails because token lacks write scope, fix GitHub auth and rerun only
 
 ```bash
 python tools/retry_rollout_pushes.py --summary /tmp/agentx_rollout_summary.json --workdir /tmp/agentx-rollout
+```
+
+## Repo security hardening rollout
+
+Harden all your repos in one command. Adds standard security files via PR and
+applies GitHub repo settings (branch protection, Actions permissions, security
+features) via the GitHub API.
+
+### Quick start
+
+```bash
+# Dry-run first (default — no changes made)
+python tools/harden_repos.py --owner Unwrenchable --hardening-all
+
+# Apply everything: file PRs + settings
+python tools/harden_repos.py --owner Unwrenchable --hardening-all --apply
+
+# File PRs only (no API settings changes)
+python tools/harden_repos.py --owner Unwrenchable --hardening-files --apply
+
+# API settings only (no file PRs)
+python tools/harden_repos.py --owner Unwrenchable --hardening-settings --apply
+
+# Target specific repos
+python tools/harden_repos.py --owner Unwrenchable --hardening-all --apply \
+  --repos my-repo-1 my-repo-2
+```
+
+Output is a JSON summary with per-repo status, PR URLs, and settings applied/skipped/errors.
+
+### What gets added per repo (file PR)
+
+| File | Purpose |
+|------|---------|
+| `SECURITY.md` | Private vulnerability reporting, supported versions, disclosure policy |
+| `.github/CODEOWNERS` | Enforces owner review on workflows, lockfiles, release configs |
+| `.github/dependabot.yml` | Automated updates for detected ecosystems + GitHub Actions |
+| `.github/pull_request_template.md` | Security checklist: deps, workflows, secrets, tests |
+| `.github/workflows/security.yml` | Dependency review + Gitleaks secret scan (configurable) |
+| `LICENSE` | Non-commercial source license (or dual-license if configured) |
+| `README.md` | License summary section added/updated |
+
+### Repo settings applied (API)
+
+| Setting | Value |
+|---------|-------|
+| Branch protection | PRs required, 1 approval, dismiss stale reviews, require conversation resolution |
+| Actions permissions | Default workflow token set to `read` (least privilege) |
+| Dependabot alerts | Enabled |
+| Dependabot security updates | Enabled |
+| Secret scanning + push protection | Enabled (requires GitHub Advanced Security; errors reported gracefully) |
+
+### Policy configuration (`policy.json`)
+
+Customize hardening behavior by editing `policy.json` at the repo root:
+
+```json
+{
+  "license_mode": "non-commercial",
+  "license_contact": "your@email.com",
+  "approvals_required": 1,
+  "dependabot_schedule": "weekly",
+  "security_workflow": true,
+  "branch_protection": {
+    "require_pr": true,
+    "approvals_required": 1,
+    "dismiss_stale_reviews": true,
+    "require_conversation_resolution": true
+  }
+}
+```
+
+**`license_mode`** options:
+- `"non-commercial"` (default) — non-commercial source-available license
+- `"dual"` — dual-license scaffold (non-commercial public + commercial by contact)
+
+Pass a custom policy file path with `--policy /path/to/policy.json`.
+
+### Running tests
+
+```bash
+pip install -e ".[dev]"
+python -m pytest
 ```
