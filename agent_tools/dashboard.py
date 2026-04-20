@@ -505,8 +505,14 @@ _HTML = """\
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>AgentX \u2014 Workflow Dashboard</title>
+<title>AgentX — Workflow Dashboard | AI Agent Registry & Orchestration</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="AgentX live workflow dashboard — visualise your AI agent registry, monitor real-time task execution, and manage capability-based access profiles across repos.">
+<meta name="keywords" content="agentx, ai agents, agent registry, github copilot agents, llm tooling, workflow orchestration, capability checks, access profiles, devtools">
+<meta property="og:type" content="website">
+<meta property="og:title" content="AgentX — AI Agent Workflow Dashboard">
+<meta property="og:description" content="Real-time visualisation of your AI agent registry. Monitor task execution, capability enforcement, and multi-agent workflows.">
+<meta name="robots" content="index, follow">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;height:100vh;overflow:hidden}
