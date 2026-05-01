@@ -9,7 +9,7 @@ import json
 import threading
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Callable
@@ -117,7 +117,7 @@ class ExecutionRuntime:
     ) -> str:
         """Create a new agent execution and return its ID."""
         execution_id = str(uuid4())
-        now = datetime.utcnow().isoformat() + "Z"
+        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
         execution = AgentExecution(
             id=execution_id,
@@ -141,7 +141,7 @@ class ExecutionRuntime:
             if not execution:
                 return
 
-            now = datetime.utcnow().isoformat() + "Z"
+            now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
             execution.status = ExecutionStatus.RUNNING
             execution.started_at = now
 
@@ -175,7 +175,7 @@ class ExecutionRuntime:
             if not execution:
                 return
 
-            now = datetime.utcnow().isoformat() + "Z"
+            now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
         self._emit_event(
             ExecutionEvent(
@@ -202,7 +202,7 @@ class ExecutionRuntime:
             if not execution:
                 return
 
-            now = datetime.utcnow().isoformat() + "Z"
+            now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
             execution.status = ExecutionStatus.COMPLETED
             execution.completed_at = now
             execution.result = result or {}
@@ -234,7 +234,7 @@ class ExecutionRuntime:
             if not execution:
                 return
 
-            now = datetime.utcnow().isoformat() + "Z"
+            now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
             execution.status = ExecutionStatus.FAILED
             execution.completed_at = now
             execution.error = error

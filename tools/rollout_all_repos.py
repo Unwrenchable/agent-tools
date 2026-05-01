@@ -3,11 +3,16 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
-import subprocess
 from dataclasses import asdict
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
+
+# Ensure tools/ is on sys.path so _shared is importable whether this script is
+# invoked directly ("python tools/rollout_all_repos.py") or as a module.
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _shared import run  # noqa: E402
 
 from agent_tools.importer import import_agency_agents
 
@@ -23,22 +28,6 @@ class RepoResult:
     status: str
     pr_url: str = ""
     message: str = ""
-
-
-def run(cmd: list[str], cwd: Path | None = None, check: bool = True) -> str:
-    process = subprocess.run(
-        cmd,
-        cwd=str(cwd) if cwd else None,
-        capture_output=True,
-        text=True,
-    )
-    if check and process.returncode != 0:
-        raise RuntimeError(
-            f"Command failed ({process.returncode}): {' '.join(cmd)}\n"
-            f"stdout:\n{process.stdout}\n"
-            f"stderr:\n{process.stderr}"
-        )
-    return process.stdout.strip()
 
 
 def load_json(path: Path) -> list[dict]:
@@ -59,9 +48,19 @@ def slugify(value: str) -> str:
 
 def detect_stack_tags(repo_path: Path) -> list[str]:
     tags: set[str] = set()
-    # JavaScript / Node
-    if (repo_path / "package.json").exists():
+    # JavaScript / Node — read package.json once for both existence and content checks
+    pkg_json_path = repo_path / "package.json"
+    if pkg_json_path.exists():
         tags.update(["node", "javascript"])
+        try:
+            pkg = json.loads(pkg_json_path.read_text(encoding="utf-8"))
+            deps = {**pkg.get("dependencies", {}), **pkg.get("devDependencies", {})}
+            if "@pump-fun/agent-payments-sdk" in deps or any(
+                k.startswith("@solana/") for k in deps
+            ):
+                tags.add("solana")
+        except (json.JSONDecodeError, OSError):
+            pass
     # Python
     if (repo_path / "pyproject.toml").exists() or (repo_path / "requirements.txt").exists():
         tags.update(["python"])
@@ -113,17 +112,6 @@ def detect_stack_tags(repo_path: Path) -> list[str]:
     # Documentation
     if any((repo_path / d).is_dir() for d in ("docs", "doc", "documentation")):
         tags.add("documentation")
-    # Solana / pump.fun tokenized-agent payments
-    if (repo_path / "package.json").exists():
-        try:
-            pkg = json.loads((repo_path / "package.json").read_text(encoding="utf-8"))
-            deps = {**pkg.get("dependencies", {}), **pkg.get("devDependencies", {})}
-            if "@pump-fun/agent-payments-sdk" in deps or any(
-                k.startswith("@solana/") for k in deps
-            ):
-                tags.add("solana")
-        except (json.JSONDecodeError, OSError):
-            pass
     # Browser testing frameworks
     if (
         any(repo_path.glob("playwright.config.*"))
@@ -605,24 +593,20 @@ agentx check {base_id}-devops-pilot --profile power
     (agentx_dir / "README.md").write_text(readme, encoding="utf-8")
 
 
-MCP_JSON = """\
-{
-  "servers": {
-    "github": {
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/"
+_MCP_SERVERS: dict = {
+    "servers": {
+        "github": {
+            "type": "http",
+            "url": "https://api.githubcopilot.com/mcp/",
+        }
     }
-  }
 }
-"""
 
-VSCODE_SETTINGS_JSON = """\
-{
-  "chat.mcp.enabled": true,
-  "github.copilot.chat.agent.thinkingTool": true,
-  "github.copilot.nextEditSuggestions.enabled": true
+_VSCODE_SETTINGS: dict = {
+    "chat.mcp.enabled": True,
+    "github.copilot.chat.agent.thinkingTool": True,
+    "github.copilot.nextEditSuggestions.enabled": True,
 }
-"""
 
 
 def write_copilot_files(repo_path: Path, repo_name: str, tags: list[str]) -> None:
@@ -738,12 +722,12 @@ repository.
 
     mcp_path = vscode_dir / "mcp.json"
     mcp_data = json.loads(mcp_path.read_text(encoding="utf-8")) if mcp_path.exists() else {}
-    mcp_data.setdefault("servers", {}).update(json.loads(MCP_JSON)["servers"])
+    mcp_data.setdefault("servers", {}).update(_MCP_SERVERS["servers"])
     mcp_path.write_text(json.dumps(mcp_data, indent=2) + "\n", encoding="utf-8")
 
     settings_path = vscode_dir / "settings.json"
     settings_data = json.loads(settings_path.read_text(encoding="utf-8")) if settings_path.exists() else {}
-    settings_data.update(json.loads(VSCODE_SETTINGS_JSON))
+    settings_data.update(_VSCODE_SETTINGS)
     settings_path.write_text(json.dumps(settings_data, indent=2) + "\n", encoding="utf-8")
 
 
