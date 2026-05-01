@@ -4,7 +4,6 @@ import argparse
 import json
 import re
 import shutil
-import subprocess
 from dataclasses import asdict
 from dataclasses import dataclass
 from dataclasses import field
@@ -12,27 +11,15 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _shared import run  # noqa: E402
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_POLICY_PATH = ROOT / "policy.json"
 
 # ── helpers ────────────────────────────────────────────────────────────────────
-
-
-def run(cmd: list[str], cwd: Path | None = None, check: bool = True) -> str:
-    process = subprocess.run(
-        cmd,
-        cwd=str(cwd) if cwd else None,
-        capture_output=True,
-        text=True,
-    )
-    if check and process.returncode != 0:
-        raise RuntimeError(
-            f"Command failed ({process.returncode}): {' '.join(cmd)}\n"
-            f"stdout:\n{process.stdout}\n"
-            f"stderr:\n{process.stderr}"
-        )
-    return process.stdout.strip()
 
 
 def write_json(path: Path, payload: Any) -> None:

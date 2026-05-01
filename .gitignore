@@ -3,3 +3,35 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+
+# Virtual environments
+.venv/
+venv/
+env/
+.env/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Logs and local state
+*.log
+*.log.*
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# IDE / editor configs
+.idea/
+*.swp
+*.swo
+
+# Pytest / type-checker caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Personal agentx system-prompt files (e.g. master.agentx)
+*.agentx

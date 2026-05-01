@@ -15,6 +15,16 @@ from .registry import load_agents
 from .runtime import get_runtime
 
 
+_PROGRESS_MESSAGES: tuple[str, ...] = (
+    "analyzing requirements",
+    "gathering context",
+    "processing logic",
+    "validating approach",
+    "generating output",
+    "finalizing results",
+)
+
+
 def execute_agent_task(
     agent_id: str,
     task: str,
@@ -102,16 +112,8 @@ def execute_agent_task(
 
 def _get_progress_message(step: int, total_steps: int) -> str:
     """Generate a progress message based on current step."""
-    messages = [
-        "analyzing requirements",
-        "gathering context",
-        "processing logic",
-        "validating approach",
-        "generating output",
-        "finalizing results",
-    ]
-    if step < len(messages):
-        return messages[step]
+    if step < len(_PROGRESS_MESSAGES):
+        return _PROGRESS_MESSAGES[step]
     return f"processing step {step + 1}"
 
 
