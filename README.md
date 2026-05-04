@@ -27,6 +27,11 @@ This project is inspired by multi-agent structure patterns (clear roles, workflo
 - `agentx export --json`: export registry for automation pipelines
 - `agentx import-agency <path>`: import markdown agents from agency-style repos
 
+### Agent Training & Reliability Coverage
+- Evaluation and regression specialists for measurable agent quality improvements
+- Observability and feedback-loop specialists for production learning
+- Grounding and incident-response specialists for safer, more reliable agent behavior
+
 ### Real-Time Execution
 - `agentx serve`: launch web dashboard with live visualization
 - `agentx run <agent_id> <task>`: execute an agent with a task
