@@ -297,7 +297,26 @@ def _safe_chroma_name(namespace: str) -> str:
     return safe
 
 
-def create_memory_adapter(adapter: str, root_dir: Path) -> MemoryAdapter:
+def create_memory_adapter(
+    adapter: str,
+    root_dir: Path,
+    embeddings_provider: Any | None = None,
+) -> MemoryAdapter:
+    """Create and return a :class:`MemoryAdapter` for the requested backend.
+
+    Args:
+        adapter:             One of ``"json"``, ``"sqlite"``, ``"redis"``,
+                             ``"chroma"``, or ``"vector"``.
+        root_dir:            Repository root used as the base path for
+                             file-backed adapters.
+        embeddings_provider: Optional object with an
+                             ``.embed(texts: list[str]) -> list[list[float]]``
+                             method.  When supplied and *adapter* is
+                             ``"chroma"``, the provider is wrapped into a
+                             ChromaDB-compatible embedding function so that
+                             documents are indexed with real semantic
+                             embeddings instead of the built-in hash fallback.
+    """
     adapter_name = adapter.strip().lower()
     if adapter_name == "json":
         return JsonFileMemoryAdapter(root_dir / ".agentx" / "memory.json")
@@ -306,9 +325,40 @@ def create_memory_adapter(adapter: str, root_dir: Path) -> MemoryAdapter:
     if adapter_name == "redis":
         return RedisMemoryAdapter()
     if adapter_name == "chroma":
-        return ChromaVectorMemoryAdapter(root_dir)
+        embedding_fn: Any | None = None
+        if embeddings_provider is not None:
+            embedding_fn = _ProviderEmbeddingFunction(embeddings_provider)
+        return ChromaVectorMemoryAdapter(root_dir, embedding_fn=embedding_fn)
     if adapter_name in {"vector", "lancedb", "pgvector"}:
         # In-memory adapter for lightweight/test workloads.
         # Use "chroma" for persistent, semantically-indexed storage.
         return VectorMemoryAdapter()
     raise ValueError(f"Unsupported memory adapter: {adapter}")
+
+
+class _ProviderEmbeddingFunction:
+    """Wraps an embeddings provider into the ChromaDB embedding-function protocol.
+
+    ChromaDB embedding functions are callables that accept
+    ``input: list[str]`` and return ``list[list[float]]``.
+
+    Any provider with an ``.embed(texts: list[str]) -> list[list[float]]``
+    method is compatible — including :class:`~agent_tools.providers.realai_embeddings.RealAIEmbeddings`.
+
+    Example::
+
+        from agent_tools.providers.realai_embeddings import RealAIEmbeddings
+        from agent_tools.engine.memory import create_memory_adapter
+
+        adapter = create_memory_adapter(
+            "chroma",
+            repo_root,
+            embeddings_provider=RealAIEmbeddings(),
+        )
+    """
+
+    def __init__(self, provider: Any) -> None:
+        self._provider = provider
+
+    def __call__(self, texts: list[str]) -> list[list[float]]:
+        return self._provider.embed(texts)
