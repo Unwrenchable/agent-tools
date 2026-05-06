@@ -4,6 +4,10 @@ __pycache__/
 dist/
 build/
 
+# Node
+node_modules/
+.next/
+
 # Virtual environments
 .venv/
 venv/
