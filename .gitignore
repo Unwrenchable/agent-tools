@@ -39,3 +39,5 @@ Thumbs.db
 
 # Personal agentx system-prompt files (e.g. master.agentx)
 *.agentx
+# Allow project agent manifests in the agents/ directory to be tracked
+!agents/*.agentx
