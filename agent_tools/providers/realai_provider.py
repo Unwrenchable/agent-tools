@@ -6,27 +6,41 @@ REALAI_API_URL = os.getenv("REALAI_API_URL")
 REALAI_API_KEY = os.getenv("REALAI_API_KEY")
 REALAI_MODEL = os.getenv("REALAI_MODEL", "realai-psi")
 
-def call_realai(messages):
-    start = time.time()
+class RealAIProvider:
+    name = "realai"
 
-    payload = {
-        "model": REALAI_MODEL,
-        "messages": messages
-    }
+    def complete(self, prompt: str, context: dict, dry_run: bool = False):
+        if dry_run:
+            return {
+                "response": f"[DRY RUN] RealAI would respond to: {prompt}",
+                "tokens": 0
+            }
 
-    headers = {
-        "Authorization": f"Bearer {REALAI_API_KEY}",
-        "Content-Type": "application/json"
-    }
+        start = time.time()
 
-    r = requests.post(f"{REALAI_API_URL}/v1/chat/completions",
-                      json=payload,
-                      headers=headers)
+        payload = {
+            "model": REALAI_MODEL,
+            "messages": [
+                {"role": "system", "content": context.get("role", "assistant")},
+                {"role": "user", "content": prompt}
+            ]
+        }
 
-    r.raise_for_status()
-    data = r.json()
+        headers = {
+            "Authorization": f"Bearer {REALAI_API_KEY}",
+            "Content-Type": "application/json"
+        }
 
-    content = data["choices"][0]["message"]["content"]
-    latency = int((time.time() - start) * 1000)
+        r = requests.post(f"{REALAI_API_URL}/v1/chat/completions",
+                          json=payload,
+                          headers=headers)
+        r.raise_for_status()
+        data = r.json()
 
-    return content, latency
+        latency = int((time.time() - start) * 1000)
+
+        return {
+            "response": data["choices"][0]["message"]["content"],
+            "tokens": data.get("usage", {}).get("total_tokens", 0),
+            "latency_ms": latency
+        }
