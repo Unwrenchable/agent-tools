@@ -9,6 +9,7 @@
     "strategy": "semantic",
     "preferred_agents": ["router", "worker", "sandbox"]
   },
+  "provider_preferences": ["realai"],
   "metadata": {
     "category": "orchestrator",
     "version": "1.0.0"

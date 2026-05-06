@@ -5,6 +5,7 @@
   "role": "system",
   "tools": [],
   "permissions": ["safe"],
+  "provider_preferences": ["realai"],
   "metadata": {
     "category": "governance",
     "version": "1.0.0"
