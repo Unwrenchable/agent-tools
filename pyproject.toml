@@ -38,6 +38,7 @@ classifiers = [
 
 [project.scripts]
 agentx = "agent_tools.cli:main"
+agent-tools = "agent_tools.cli:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
@@ -47,7 +48,12 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["agent_tools"]
+packages = [
+  "agent_tools",
+  "agent_tools.engine",
+  "agent_tools.tooling",
+  "agent_tools.providers",
+]
 
 [tool.setuptools.package-data]
 agent_tools = ["data/*.json"]

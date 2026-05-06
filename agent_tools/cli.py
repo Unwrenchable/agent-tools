@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 import time
 from dataclasses import asdict
 
 from .dashboard import serve as _serve_dashboard
+from .engine.executor import AgentExecutor
+from .engine.loader import ManifestValidationError
+from .engine.test_harness import run_self_tests
 from .executor import execute_agent_task, execute_workflow
 from .importer import import_agency_agents, merge_into_registry, write_json
 from .registry import (
@@ -68,7 +72,11 @@ def _build_parser() -> argparse.ArgumentParser:
 
     run_parser = sub.add_parser("run", help="Execute an agent with a task")
     run_parser.add_argument("agent_id", help="agent identifier")
-    run_parser.add_argument("task", help="task description for the agent")
+    run_parser.add_argument("task", nargs="?", help="task description for the agent")
+    run_parser.add_argument("--input", dest="input_text", help="input text (alternative to positional task)")
+    run_parser.add_argument("--provider", default=None, help="provider override (openai|groq|anthropic|realai|local)")
+    run_parser.add_argument("--dry-run", action="store_true", help="show planned actions without side effects")
+    run_parser.add_argument("--json", action="store_true", help="emit structured JSON output")
     run_parser.add_argument("--watch", action="store_true", help="watch execution progress")
 
     workflow_parser = sub.add_parser("workflow", help="Execute a workflow of multiple agents")
@@ -78,6 +86,8 @@ def _build_parser() -> argparse.ArgumentParser:
     status_parser = sub.add_parser("status", help="Show execution status")
     status_parser.add_argument("--active", action="store_true", help="show only active executions")
     status_parser.add_argument("--limit", type=int, default=10, help="number of recent executions to show")
+
+    sub.add_parser("test", help="Run schema and agent self-tests")
 
     return parser
 
@@ -193,13 +203,64 @@ def cmd_serve(host: str, port: int, no_simulation: bool) -> int:
     return 0
 
 
-def cmd_run(agent_id: str, task: str, watch: bool) -> int:
-    """Execute an agent with a task."""
+def cmd_run(
+    agent_id: str,
+    task: str | None,
+    input_text: str | None,
+    watch: bool,
+    provider: str | None,
+    dry_run: bool,
+    as_json: bool,
+) -> int:
+    """Execute an agent with a task or input payload."""
+    resolved_input = (input_text or task or "").strip()
+    if not resolved_input:
+        print("Error: provide either positional task or --input")
+        return 2
+
     print(f"Executing agent: {agent_id}")
-    print(f"Task: {task}")
+    print(f"Input: {resolved_input}")
+
+    # New deterministic engine path for provider override or dry-run usage.
+    if provider or dry_run or as_json:
+        try:
+            executor = AgentExecutor(repo_root=Path.cwd())
+            result = executor.run(
+                agent_id=agent_id,
+                input_text=resolved_input,
+                provider_override=provider,
+                dry_run=dry_run,
+            )
+        except ManifestValidationError as exc:
+            print(f"Manifest validation failed: {exc}")
+            for err in exc.errors:
+                print(f"- {err}")
+            return 1
+        except Exception as exc:
+            print(f"Error: {exc}")
+            return 1
+
+        payload = {
+            "agent_id": result.agent_id,
+            "provider": result.provider,
+            "latency_ms": result.latency_ms,
+            "dry_run": result.dry_run,
+            "tool_calls": result.tool_calls,
+            "output": result.output,
+            "logs": result.logs,
+        }
+        if as_json:
+            print(json.dumps(payload, indent=2))
+        else:
+            print(f"Provider: {result.provider}")
+            print(f"Latency: {result.latency_ms}ms")
+            print(f"Dry run: {result.dry_run}")
+            print(f"Tool calls: {len(result.tool_calls)}")
+            print(f"Output: {json.dumps(result.output, indent=2)}")
+        return 0
 
     try:
-        execution_id = execute_agent_task(agent_id, task)
+        execution_id = execute_agent_task(agent_id, resolved_input)
         print(f"Execution ID: {execution_id}")
 
         if watch:
@@ -234,6 +295,23 @@ def cmd_run(agent_id: str, task: str, watch: bool) -> int:
     except Exception as e:
         print(f"Error: {e}")
         return 1
+
+
+def cmd_test() -> int:
+    """Run agent manifest and fixture self-tests."""
+    try:
+        summary = run_self_tests(Path.cwd())
+    except ManifestValidationError as exc:
+        print(f"Manifest validation failed: {exc}")
+        for err in exc.errors:
+            print(f"- {err}")
+        return 1
+    except Exception as exc:
+        print(f"Test harness failed: {exc}")
+        return 1
+
+    print(f"Self-tests: total={summary.total} passed={summary.passed} failed={summary.failed}")
+    return 0 if summary.failed == 0 else 1
 
 
 def cmd_workflow(file: str, parallel: bool) -> int:
@@ -317,11 +395,21 @@ def main() -> int:
     if args.command == "serve":
         return cmd_serve(args.host, args.port, args.no_simulation)
     if args.command == "run":
-        return cmd_run(args.agent_id, args.task, args.watch)
+        return cmd_run(
+            args.agent_id,
+            args.task,
+            args.input_text,
+            args.watch,
+            args.provider,
+            args.dry_run,
+            args.json,
+        )
     if args.command == "workflow":
         return cmd_workflow(args.file, args.parallel)
     if args.command == "status":
         return cmd_status(args.active, args.limit)
+    if args.command == "test":
+        return cmd_test()
 
     parser.print_help()
     return 1

@@ -1,0 +1,7 @@
+{
+  "name": "master dry run",
+  "agent_id": "master",
+  "input": "Read README content",
+  "dry_run": true,
+  "expected_tool": "filesystem"
+}

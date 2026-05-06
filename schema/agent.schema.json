@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentx.dev/schema/agent.schema.json",
+  "title": "Agent Manifest",
+  "type": "object",
+  "required": [
+    "id",
+    "role",
+    "goals",
+    "input_format",
+    "output_format",
+    "tools_allowed",
+    "memory_policy",
+    "routing_tags"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "role": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "goals": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "input_format": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["text", "json"]
+        },
+        "schema": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
+    "output_format": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["text", "json"]
+        },
+        "schema": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
+    "tools_allowed": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9_\\-]+$"
+      }
+    },
+    "memory_policy": {
+      "type": "object",
+      "required": ["adapter"],
+      "properties": {
+        "adapter": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "max_items": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "routing_tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "provider_preferences": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": true
+}

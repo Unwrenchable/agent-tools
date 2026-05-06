@@ -1,0 +1,1 @@
+# webdev skill pack\n\nOptional skill metadata for web-development behavior.\n

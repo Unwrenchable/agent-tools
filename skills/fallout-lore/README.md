@@ -1,0 +1,1 @@
+# fallout-lore skill pack\n\nOptional skill metadata for lore-specialized behavior.\n

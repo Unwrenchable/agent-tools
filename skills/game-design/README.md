@@ -1,0 +1,1 @@
+# game-design skill pack\n\nOptional skill metadata for game design behavior.\n

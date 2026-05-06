@@ -1,0 +1,7 @@
+{
+  "name": "router preference",
+  "agent_id": "router",
+  "input": "Route this request to the fastest model",
+  "dry_run": true,
+  "expected_provider": "local"
+}

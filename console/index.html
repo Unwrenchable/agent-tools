@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent Tools Console</title>
+  <style>
+    :root {
+      --bg: #f4f8f7;
+      --panel: #ffffff;
+      --text: #1f2d2a;
+      --accent: #0b7a75;
+      --muted: #6a7a78;
+    }
+    body { margin: 0; font-family: "IBM Plex Sans", "Segoe UI", sans-serif; background: linear-gradient(160deg, #f4f8f7, #e9f0ef); color: var(--text); }
+    .wrap { max-width: 920px; margin: 24px auto; padding: 20px; }
+    .card { background: var(--panel); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); padding: 20px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    textarea, input, select, button { width: 100%; box-sizing: border-box; margin-top: 6px; padding: 10px; border-radius: 8px; border: 1px solid #d4dfdd; font: inherit; }
+    button { background: var(--accent); color: #fff; border: none; cursor: pointer; }
+    pre { background: #0f2220; color: #d2f0ea; padding: 12px; border-radius: 10px; overflow: auto; min-height: 220px; }
+    .hint { color: var(--muted); font-size: 14px; }
+    @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Agent Runtime Console</h1>
+      <p class="hint">CLI-first runtime inspector. This UI shells out to the local CLI command.</p>
+      <div class="grid">
+        <label>Agent ID
+          <input id="agent" value="master" />
+        </label>
+        <label>Provider
+          <select id="provider">
+            <option value="">auto</option>
+            <option value="local">local</option>
+            <option value="openai">openai</option>
+            <option value="groq">groq</option>
+            <option value="anthropic">anthropic</option>
+            <option value="realai">realai</option>
+          </select>
+        </label>
+      </div>
+      <label>Input
+        <textarea id="input" rows="5">Create a sha256 hash for hello</textarea>
+      </label>
+      <label><input id="dry" type="checkbox" /> Dry run</label>
+      <button id="runBtn">Build CLI command</button>
+      <h3>Command Preview</h3>
+      <pre id="output"></pre>
+    </div>
+  </div>
+  <script src="console.js"></script>
+</body>
+</html>

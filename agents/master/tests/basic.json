@@ -1,0 +1,7 @@
+{
+  "name": "master basic run",
+  "agent_id": "master",
+  "input": "Create a sha256 hash for hello",
+  "dry_run": false,
+  "expected_contains": "sha256"
+}

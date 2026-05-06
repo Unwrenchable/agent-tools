@@ -93,6 +93,10 @@ python -m agent_tools.cli workflow --file examples/workflow-feature-dev.json
 
 # Check execution status
 python -m agent_tools.cli status --active
+
+# Deterministic orchestration runtime
+python -m agent_tools.cli run master --input "Create a sha256 hash for hello" --dry-run --json
+python -m agent_tools.cli test
 ```
 
 See the [Real-Time Execution Guide](docs/REAL_TIME_EXECUTION.md) for comprehensive examples and architecture workflows.
@@ -172,6 +176,20 @@ agent_tools/
     agents.json
 pyproject.toml
 README.md
+```
+
+Additional runtime-oriented folders:
+
+```text
+schema/
+  agent.schema.json
+  tool.schema.json
+agents/
+  *.agentx
+agent_tools/engine/
+agent_tools/tooling/
+agent_tools/providers/
+console/
 ```
 
 ## Per-repo overrides
