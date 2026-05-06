@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from time import perf_counter
 from typing import Any
+from uuid import uuid4
 
 from ..providers.router import ProviderRouter
 from ..tooling.registry import ToolRegistry
@@ -23,6 +24,7 @@ class ExecutionResult:
     logs: list[dict[str, Any]]
     latency_ms: int
     dry_run: bool
+    session_id: str | None = None
 
 
 class AgentExecutor:
@@ -48,8 +50,11 @@ class AgentExecutor:
         input_text: str,
         provider_override: str | None = None,
         dry_run: bool = False,
+        session_id: str | None = None,
     ) -> ExecutionResult:
         started = perf_counter()
+        resolved_session_id = session_id or str(uuid4())
+        self._logger.log("session", session_id=resolved_session_id)
         manifests = self._loader.load_agents()
 
         decision = self._router.route(manifests, input_text, preferred_agent_id=agent_id)
@@ -79,13 +84,24 @@ class AgentExecutor:
             self._logger.log("tool", tool=tool_name, dry_run=dry_run)
 
         memory_adapter = self._build_memory_adapter(manifest.memory_policy)
-        memory_namespace = str(manifest.memory_policy.get("namespace", manifest.id))
+        base_namespace = str(manifest.memory_policy.get("namespace", manifest.id))
         max_history = int(manifest.memory_policy.get("max_history", 10))
+
+        # Session-scoped namespaces when a caller-supplied session_id is present;
+        # flat names otherwise (preserves backward compatibility with no-session calls).
+        if session_id is not None:
+            agent_namespace = f"{resolved_session_id}:agent:{base_namespace}"
+            global_namespace = f"{resolved_session_id}:global"
+        else:
+            agent_namespace = base_namespace
+            global_namespace = "global"
 
         history = self._load_memory_history(
             adapter=memory_adapter,
             manifest_memory_policy=manifest.memory_policy,
             agent_id=manifest.id,
+            agent_namespace=agent_namespace,
+            global_namespace=global_namespace,
         )
 
         cot_context_lines: list[str] = []
@@ -99,6 +115,14 @@ class AgentExecutor:
             )
         cot_context = "\n".join(cot_context_lines)
 
+        semantic_hits = memory_adapter.search(global_namespace, query=input_text, k=5)
+        semantic_lines = [
+            f"[RELEVANT] agent={hit.get('agent_id')} summary={hit.get('summary', '')}"
+            for hit in semantic_hits
+            if hit.get("summary")
+        ]
+        semantic_context = "\n".join(semantic_lines)
+
         completion = provider.complete(
             prompt=input_text,
             context={
@@ -107,18 +131,23 @@ class AgentExecutor:
                 "tools": tool_results,
                 "dry_run": dry_run,
                 "chain_of_thought": cot_context,
+                "semantic_context": semantic_context,
+                "session_id": resolved_session_id,
             },
             dry_run=dry_run,
         )
         self._logger.log("completion", provider=provider.name, tokens=completion.get("tokens", 0))
 
-        summary_text = (completion.get("response") or completion.get("content") or "")[:_SUMMARY_MAX_CHARS]
+        summary_text = (
+            # 'response' is the canonical key; 'content' is the LocalProvider's key.
+            completion.get("response") or completion.get("content") or ""
+        )[:_SUMMARY_MAX_CHARS]
         memory_adapter.append(
-            namespace=memory_namespace,
+            namespace=agent_namespace,
             value={"agent_id": manifest.id, "input": input_text, "summary": summary_text, "tool_calls": tool_results},
         )
         memory_adapter.append(
-            namespace="global",
+            namespace=global_namespace,
             value={"agent_id": manifest.id, "input": input_text, "summary": summary_text, "tool_calls": tool_results},
         )
 
@@ -133,6 +162,7 @@ class AgentExecutor:
             logs=self._logger.to_jsonable(),
             latency_ms=latency_ms,
             dry_run=dry_run,
+            session_id=resolved_session_id,
         )
 
     def _load_memory_history(
@@ -140,7 +170,12 @@ class AgentExecutor:
         adapter: MemoryAdapter,
         manifest_memory_policy: dict[str, Any],
         agent_id: str,
+        agent_namespace: str | None = None,
+        global_namespace: str = "global",
     ) -> dict[str, list[dict[str, Any]]]:
+        # agent_namespace and global_namespace are passed in pre-computed by run() because
+        # they encode the session-scoping decision (flat vs. "{session_id}:…" prefixed).
+        # Passing them explicitly keeps this method free of session-awareness and easy to test.
         max_history = int(manifest_memory_policy.get("max_history", 10))
         use_global = bool(manifest_memory_policy.get("use_global", True))
         use_agent_local = bool(manifest_memory_policy.get("use_agent_local", True))
@@ -148,11 +183,11 @@ class AgentExecutor:
         history: dict[str, list[dict[str, Any]]] = {"global": [], "agent": []}
 
         if use_global:
-            global_items = adapter.read(namespace="global")
+            global_items = adapter.read(namespace=global_namespace)
             history["global"] = global_items[-max_history:]
 
         if use_agent_local:
-            ns = str(manifest_memory_policy.get("namespace", agent_id))
+            ns = agent_namespace if agent_namespace is not None else str(manifest_memory_policy.get("namespace", agent_id))
             local_items = adapter.read(namespace=ns)
             history["agent"] = local_items[-max_history:]
 

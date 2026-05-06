@@ -16,6 +16,10 @@ class MemoryAdapter(ABC):
     def read(self, namespace: str, limit: int = 20) -> list[dict[str, Any]]:
         raise NotImplementedError
 
+    @abstractmethod
+    def search(self, namespace: str, query: str, k: int = 5) -> list[dict[str, Any]]:
+        raise NotImplementedError
+
 
 class JsonFileMemoryAdapter(MemoryAdapter):
     def __init__(self, memory_file: Path) -> None:
@@ -33,6 +37,17 @@ class JsonFileMemoryAdapter(MemoryAdapter):
         if not isinstance(records, list):
             return []
         return [record for record in records[-limit:] if isinstance(record, dict)]
+
+    def search(self, namespace: str, query: str, k: int = 5) -> list[dict[str, Any]]:
+        # Keyword scan over JSON-serialised records.  Acceptable for moderate-size
+        # namespaces; for high-volume use cases swap to a vector or FTS backend.
+        lowered = query.lower()
+        payload = self._read_all()
+        records = payload.get(namespace, [])
+        if not isinstance(records, list):
+            return []
+        hits = [r for r in records if isinstance(r, dict) and lowered in json.dumps(r).lower()]
+        return hits[-k:]
 
     def _read_all(self) -> dict[str, Any]:
         if not self._memory_file.exists():
@@ -88,11 +103,33 @@ class SQLiteMemoryAdapter(MemoryAdapter):
         return result
 
 
+    def search(self, namespace: str, query: str, k: int = 5) -> list[dict[str, Any]]:
+        pattern = f"%{query.lower()}%"
+        with sqlite3.connect(self._db_file) as conn:
+            rows = conn.execute(
+                "SELECT payload FROM memory WHERE namespace=? AND LOWER(payload) LIKE ?"
+                " ORDER BY created_at DESC LIMIT ?",
+                (namespace, pattern, k),
+            ).fetchall()
+        result: list[dict[str, Any]] = []
+        for row in reversed(rows):
+            try:
+                payload = json.loads(row[0])
+            except json.JSONDecodeError:
+                continue
+            if isinstance(payload, dict):
+                result.append(payload)
+        return result
+
+
 class RedisMemoryAdapter(MemoryAdapter):
     def append(self, namespace: str, value: dict[str, Any]) -> None:
         raise RuntimeError("Redis adapter requires external dependency and runtime setup")
 
     def read(self, namespace: str, limit: int = 20) -> list[dict[str, Any]]:
+        raise RuntimeError("Redis adapter requires external dependency and runtime setup")
+
+    def search(self, namespace: str, query: str, k: int = 5) -> list[dict[str, Any]]:
         raise RuntimeError("Redis adapter requires external dependency and runtime setup")
 
 
@@ -105,6 +142,15 @@ class VectorMemoryAdapter(MemoryAdapter):
 
     def read(self, namespace: str, limit: int = 20) -> list[dict[str, Any]]:
         return self._records.get(namespace, [])[-limit:]
+
+    def search(self, namespace: str, query: str, k: int = 5) -> list[dict[str, Any]]:
+        # Keyword scan over the in-memory dict.  Acceptable for testing and
+        # moderate workloads; swap VectorMemoryAdapter for a Chroma-backed
+        # adapter with real embeddings for production semantic retrieval.
+        lowered = query.lower()
+        items = self._records.get(namespace, [])
+        hits = [item for item in items if lowered in json.dumps(item).lower()]
+        return hits[-k:]
 
 
 def create_memory_adapter(adapter: str, root_dir: Path) -> MemoryAdapter:
