@@ -1,0 +1,7 @@
+{
+  "id": "master",
+  "name": "Master Agent",
+  "description": "Primary orchestrator agent responsible for routing and high-level decisions.",
+  "tools": [],
+  "permissions": ["safe"]
+}
