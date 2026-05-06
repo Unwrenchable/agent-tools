@@ -1345,6 +1345,56 @@
     "risk_level": "high"
   },
   {
+    "id": "agent-evals-engineer",
+    "role": "Agent Evals Engineer",
+    "description": "Designs and maintains evaluation suites for AI agents so quality improvements are measurable instead of anecdotal. Defines golden tasks, scoring rubrics, regression tests, and failure taxonomies, then uses the results to guide prompt, tooling, and workflow changes.",
+    "tags": ["ai", "evaluation", "regression", "quality", "benchmarking", "agents"],
+    "capabilities": ["eval-design", "rubric-authoring", "golden-task-curation", "regression-detection", "failure-taxonomy", "benchmark-analysis"],
+    "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
+    "preferred_profile": "balanced",
+    "risk_level": "medium"
+  },
+  {
+    "id": "agent-observability-engineer",
+    "role": "Agent Observability Engineer",
+    "description": "Instruments agent systems so behavior is explainable in production. Defines traces, metrics, structured logs, latency and cost budgets, and review workflows that make it easier to diagnose failures, spot drift, and understand real-world agent performance over time.",
+    "tags": ["ai", "observability", "telemetry", "monitoring", "operations", "agents"],
+    "capabilities": ["trace-instrumentation", "metrics-design", "structured-logging", "latency-budgeting", "cost-analysis", "drift-detection"],
+    "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
+    "preferred_profile": "balanced",
+    "risk_level": "medium"
+  },
+  {
+    "id": "feedback-learning-engineer",
+    "role": "Feedback Learning Engineer",
+    "description": "Turns user and operator feedback into durable improvements for agent behavior. Clusters recurring failures, curates correction datasets, updates prompts and policies, and closes the loop between production mistakes and future agent performance.",
+    "tags": ["ai", "feedback", "learning", "datasets", "quality", "agents"],
+    "capabilities": ["feedback-triage", "correction-dataset-curation", "prompt-iteration", "policy-refinement", "failure-clustering", "continuous-improvement"],
+    "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
+    "preferred_profile": "balanced",
+    "risk_level": "medium"
+  },
+  {
+    "id": "grounding-engineer",
+    "role": "Grounding Engineer",
+    "description": "Improves answer reliability by designing strong retrieval and grounding patterns for AI agents. Optimizes retrieval quality, source ranking, citation behavior, context assembly, and freshness checks to reduce hallucinations and keep responses tied to trustworthy evidence.",
+    "tags": ["ai", "grounding", "retrieval", "rag", "citations", "reliability"],
+    "capabilities": ["retrieval-tuning", "source-ranking", "citation-design", "context-assembly", "freshness-validation", "hallucination-reduction"],
+    "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "apply_patch", "create_file", "run_in_terminal"],
+    "preferred_profile": "balanced",
+    "risk_level": "medium"
+  },
+  {
+    "id": "ai-incident-responder",
+    "role": "AI Incident Responder",
+    "description": "Handles production incidents caused by AI agents and model-backed workflows. Coordinates containment, rollback, user impact assessment, communication, and postmortem follow-through so unsafe or degraded behavior is mitigated quickly and does not repeat.",
+    "tags": ["ai", "incident-response", "rollback", "operations", "safety", "agents"],
+    "capabilities": ["incident-triage", "rollback-planning", "impact-assessment", "runbook-execution", "postmortem-analysis", "guardrail-hardening"],
+    "required_tools": ["read_file", "list_dir", "grep_search", "semantic_search", "run_in_terminal", "github_repo", "runSubagent"],
+    "preferred_profile": "power",
+    "risk_level": "high"
+  },
+  {
     "id": "expansion-coordinator",
     "role": "Expansion Coordinator",
     "description": "Coordinates future expansions and integrations across the agent ecosystem. Manages roadmap execution, dependency resolution, and seamless integration of new capabilities and frameworks.",

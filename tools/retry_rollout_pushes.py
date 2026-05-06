@@ -2,24 +2,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 from pathlib import Path
 
-
-def run(cmd: list[str], cwd: Path | None = None, check: bool = True) -> str:
-    process = subprocess.run(
-        cmd,
-        cwd=str(cwd) if cwd else None,
-        capture_output=True,
-        text=True,
-    )
-    if check and process.returncode != 0:
-        raise RuntimeError(
-            f"Command failed ({process.returncode}): {' '.join(cmd)}\n"
-            f"stdout:\n{process.stdout}\n"
-            f"stderr:\n{process.stderr}"
-        )
-    return process.stdout.strip()
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _shared import run  # noqa: E402
 
 
 def main() -> int:

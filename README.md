@@ -1,12 +1,19 @@
 # agent-tools
 
-Reusable toolkit for managing AI agents across repositories with:
+> **AI agent registry, capability enforcement, and multi-repo rollout for GitHub Copilot and autonomous coding agents.**
 
-- **Quick access** to agent registry (`list`, `find`)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: Non-Commercial](https://img.shields.io/badge/license-non--commercial-lightgrey.svg)](LICENSE)
+[![Topics: ai-agents · github-copilot · agent-registry · llm-tooling · devtools](https://img.shields.io/badge/topics-ai--agents%20%7C%20github--copilot%20%7C%20agent--registry%20%7C%20llm--tooling%20%7C%20devtools-informational.svg)](#)
+
+`agent-tools` is a zero-dependency Python toolkit (`agentx` CLI) for managing AI agents across a GitHub organisation. It gives you:
+
+- **Quick access** to a shared agent registry (`list`, `find`)
 - **Smarter capability checks** (required tools vs granted tools)
 - **Safer expanded access** via profile-based permissions (`safe`, `balanced`, `power`)
 - **Real-time execution tracking** with live web dashboard
 - **Workflow orchestration** for multi-agent collaboration
+- **One-command rollout** of `.agentx` packs and Copilot config to every repo in an org
 
 This project is inspired by multi-agent structure patterns (clear roles, workflows, and success criteria) and turns those ideas into a practical CLI you can use in your own ecosystem of repos.
 
@@ -19,6 +26,11 @@ This project is inspired by multi-agent structure patterns (clear roles, workflo
 - `agentx recommend <agent_id>`: least-friction profile recommendation
 - `agentx export --json`: export registry for automation pipelines
 - `agentx import-agency <path>`: import markdown agents from agency-style repos
+
+### Agent Training & Reliability Coverage
+- Evaluation and regression specialists for measurable agent quality improvements
+- Observability and feedback-loop specialists for production learning
+- Grounding and incident-response specialists for safer, more reliable agent behavior
 
 ### Real-Time Execution
 - `agentx serve`: launch web dashboard with live visualization

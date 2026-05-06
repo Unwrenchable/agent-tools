@@ -1,10 +1,40 @@
 [project]
 name = "agent-tools"
 version = "0.1.0"
-description = "Reusable agent registry, capability checks, and access profiles"
+description = "Reusable AI agent registry with capability checks, access profiles, and multi-repo rollout for GitHub Copilot and autonomous coding agents"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []
+keywords = [
+  "ai-agents",
+  "agent-registry",
+  "github-copilot",
+  "copilot-agents",
+  "autonomous-agents",
+  "capability-checks",
+  "access-profiles",
+  "multi-repo",
+  "devtools",
+  "agentx",
+  "llm-tooling",
+  "agent-orchestration",
+]
+
+authors = [
+  { name = "Unwrenchable" },
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Software Development :: Build Tools",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "License :: Other/Proprietary License",
+  "Operating System :: OS Independent",
+]
 
 [project.scripts]
 agentx = "agent_tools.cli:main"
