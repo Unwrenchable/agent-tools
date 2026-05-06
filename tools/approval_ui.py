@@ -4,6 +4,10 @@
 Agents submit approval requests via POST /request.  Humans open the web
 UI, review pending requests, and click Approve or Reject.
 
+When ``SLACK_BOT_TOKEN`` and ``SLACK_APPROVAL_CHANNEL`` are set the UI
+also sends interactive Slack messages with Approve/Reject buttons.
+Set ``SLACK_SIGNING_SECRET`` to verify inbound Slack action callbacks.
+
 Requirements::
 
     pip install flask
@@ -21,14 +25,19 @@ POST /request          — Create a new approval request.
 GET  /api/requests     — List all requests as JSON.
 POST /approve/<id>     — Approve a request.
 POST /reject/<id>      — Reject a request.
+POST /slack/actions    — Receive interactive Slack action callbacks.
 """
 from __future__ import annotations
 
+import hashlib
+import hmac
+import json
+import os
 import sys
+import time
 from pathlib import Path
 
-# Allow ``tools/approval_store`` to be imported as a sibling module when this
-# script is run directly (not installed as a package).
+# Allow sibling modules to be imported when running directly as a script.
 _TOOLS_DIR = Path(__file__).resolve().parent
 if str(_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(_TOOLS_DIR))
@@ -44,6 +53,13 @@ except ImportError as exc:
         file=sys.stderr,
     )
     raise SystemExit(1) from exc
+
+# Notifier is optional — absence of env vars means it silently no-ops.
+try:
+    from notifier import Notifier as _Notifier
+    _notifier: _Notifier | None = _Notifier()
+except Exception:  # noqa: BLE001
+    _notifier = None
 
 app = Flask(__name__)
 
@@ -92,6 +108,46 @@ _INDEX_HTML = """
 """
 
 
+# ---------------------------------------------------------------------------
+# Slack request verification
+# ---------------------------------------------------------------------------
+
+def _verify_slack_request(req) -> bool:
+    """Verify an inbound Slack request using the signing secret.
+
+    Returns ``True`` when ``SLACK_SIGNING_SECRET`` is not set (opt-in security).
+    Returns ``False`` if the signature is missing, stale, or invalid.
+    """
+    signing_secret = os.getenv("SLACK_SIGNING_SECRET", "")
+    if not signing_secret:
+        return True
+
+    timestamp = req.headers.get("X-Slack-Request-Timestamp", "")
+    try:
+        ts = int(timestamp)
+    except (ValueError, TypeError):
+        return False
+    if abs(time.time() - ts) > 300:
+        return False
+
+    body = req.get_data(as_text=True)
+    sig_base = f"v0:{timestamp}:{body}"
+    expected = (
+        "v0="
+        + hmac.new(
+            signing_secret.encode(),
+            sig_base.encode(),
+            hashlib.sha256,
+        ).hexdigest()
+    )
+    slack_sig = req.headers.get("X-Slack-Signature", "")
+    return hmac.compare_digest(expected, slack_sig)
+
+
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
+
 @app.route("/")
 def index():
     items = list_requests()
@@ -109,6 +165,10 @@ def request_approval():
     if not body or "action" not in body or "payload" not in body:
         abort(400, description="Body must contain 'action' and 'payload' keys.")
     item = create_request(action=body["action"], payload=body["payload"])
+
+    # Send interactive Slack notification if configured.
+    _try_send_slack_approval(item)
+
     return jsonify(item), 201
 
 
@@ -116,7 +176,6 @@ def request_approval():
 def approve(req_id: str):
     if not update_request(req_id, "approved"):
         abort(404)
-    # Support both browser forms (redirect) and API calls (204).
     if request.accept_mimetypes.best == "application/json":
         return ("", 204)
     return (_redirect_to_index(), 303)
@@ -129,6 +188,68 @@ def reject(req_id: str):
     if request.accept_mimetypes.best == "application/json":
         return ("", 204)
     return (_redirect_to_index(), 303)
+
+
+@app.route("/slack/actions", methods=["POST"])
+def slack_actions():
+    """Receive interactive Slack button callbacks.
+
+    Slack posts a form field named ``payload`` containing JSON.
+    Requires the app interactivity URL to be set to
+    ``https://<your-host>/slack/actions`` in the Slack app config.
+    Set ``SLACK_SIGNING_SECRET`` to verify inbound requests.
+    """
+    if not _verify_slack_request(request):
+        abort(403)
+
+    raw = request.form.get("payload", "{}")
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        abort(400)
+
+    actions = payload.get("actions", [])
+    if not actions:
+        return ("", 200)
+
+    action = actions[0]
+    action_id = action.get("action_id", "")
+    req_id = action.get("value", "")
+
+    if action_id == "approve_action" and req_id:
+        update_request(req_id, "approved")
+        if _notifier:
+            _notifier.notify(f"Approval {req_id} approved via Slack")
+    elif action_id == "reject_action" and req_id:
+        update_request(req_id, "rejected")
+        if _notifier:
+            _notifier.notify(f"Approval {req_id} rejected via Slack")
+
+    return ("", 200)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _try_send_slack_approval(item: dict) -> None:
+    """Fire-and-forget: send interactive Slack approval message if configured."""
+    if _notifier is None:
+        return
+    channel = os.getenv("SLACK_APPROVAL_CHANNEL", "")
+    if not channel:
+        return
+    base_url = os.getenv("APPROVAL_PUBLIC_BASE", "http://localhost:5001")
+    try:
+        _notifier.send_interactive_approval(
+            channel=channel,
+            text=f"Approval requested: `{item['action']}` — id `{item['id']}`",
+            approval_id=item["id"],
+            approve_url=f"{base_url}/approve/{item['id']}",
+            reject_url=f"{base_url}/reject/{item['id']}",
+        )
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def _redirect_to_index():
@@ -150,3 +271,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(f"Starting approval UI at http://{args.host}:{args.port}/")
     app.run(host=args.host, port=args.port, debug=args.debug)
+

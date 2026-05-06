@@ -254,6 +254,69 @@ class CodeEngineerAgent:
 
         return self._stage_and_commit(commit_message=commit_message, author=author)
 
+    def run_tests_in_sandbox(
+        self,
+        image: str = "realai-sandbox:latest",
+        timeout: int = 300,
+    ) -> dict[str, Any]:
+        """Run pytest inside a Docker container that mounts the repo read-only.
+
+        The container is expected to run ``pytest -q`` via its entrypoint
+        (see ``tools/sandbox_runner/run_tests.sh``).  This lets the
+        orchestration worker verify that all tests pass *before* applying a
+        patch to the host working tree.
+
+        Args:
+            image:   Docker image to run (default: ``realai-sandbox:latest``).
+            timeout: Maximum seconds to wait for the container (default: 300).
+
+        Returns:
+            ``{"ok": True, "stdout": …, "stderr": …}`` on pass, or
+            ``{"ok": False, "stage": "tests", "stdout": …, "stderr": …}``
+            on failure / docker-unavailable.
+        """
+        repo_mount = str(self.repo_root.resolve())
+        docker_cmd = [
+            "docker", "run", "--rm",
+            "-v", f"{repo_mount}:/workspace:ro",
+            image,
+        ]
+        try:
+            proc = subprocess.run(
+                docker_cmd,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+        except FileNotFoundError:
+            return {
+                "ok": False,
+                "stage": "tests",
+                "stdout": "",
+                "stderr": "docker is not available in PATH",
+            }
+        except subprocess.TimeoutExpired:
+            return {
+                "ok": False,
+                "stage": "tests",
+                "stdout": "",
+                "stderr": f"docker run timed out after {timeout} s",
+            }
+        except Exception as exc:  # noqa: BLE001
+            return {
+                "ok": False,
+                "stage": "tests",
+                "stdout": "",
+                "stderr": str(exc),
+            }
+
+        return {
+            "ok": proc.returncode == 0,
+            "stage": "tests",
+            "stdout": proc.stdout,
+            "stderr": proc.stderr,
+        }
+
     def write_file_and_commit(
         self,
         relative_path: str,

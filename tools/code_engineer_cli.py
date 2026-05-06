@@ -2,7 +2,8 @@
 """CLI for the Code Engineer agent — validate and apply patches safely.
 
 Supports a ``--dry-run`` flag that validates the patch with
-``git apply --check`` without modifying the working tree.
+``git apply --check`` without modifying the working tree, and a
+``--sandbox`` flag that applies the patch inside a Docker container.
 
 Usage::
 
@@ -12,10 +13,16 @@ Usage::
         --commit-message "feat: add feature" \\
         --dry-run
 
-    # Apply and commit:
+    # Apply and commit (direct):
     python tools/code_engineer_cli.py \\
         --patch-file /path/to/my.patch \\
         --commit-message "feat: add feature"
+
+    # Apply inside Docker sandbox:
+    python tools/code_engineer_cli.py \\
+        --patch-file /path/to/my.patch \\
+        --commit-message "feat: add feature" \\
+        --sandbox
 
     # With author:
     python tools/code_engineer_cli.py \\
@@ -69,6 +76,17 @@ def main() -> int:
         action="store_true",
         help="Validate patch but do not apply or commit",
     )
+    parser.add_argument(
+        "--sandbox",
+        action="store_true",
+        help="Apply patch inside a Docker sandbox container (requires Docker + realai-sandbox image)",
+    )
+    parser.add_argument(
+        "--sandbox-image",
+        type=str,
+        default="realai-sandbox:latest",
+        help="Docker image to use for sandbox (default: realai-sandbox:latest)",
+    )
     args = parser.parse_args()
 
     repo = Path(args.repo).resolve()
@@ -84,12 +102,20 @@ def main() -> int:
     patch_text = patch_file.read_text(encoding="utf-8")
     agent = CodeEngineerAgent(repo_root=repo)
 
-    result = agent.apply_patch_and_commit(
-        patch_text=patch_text,
-        commit_message=args.commit_message,
-        author=args.author,
-        dry_run=args.dry_run,
-    )
+    if args.sandbox:
+        result = agent.apply_patch_and_commit_sandbox(
+            patch_text=patch_text,
+            commit_message=args.commit_message,
+            author=args.author,
+            image=args.sandbox_image,
+        )
+    else:
+        result = agent.apply_patch_and_commit(
+            patch_text=patch_text,
+            commit_message=args.commit_message,
+            author=args.author,
+            dry_run=args.dry_run,
+        )
 
     if result.get("ok"):
         stage = result.get("stage", "")
