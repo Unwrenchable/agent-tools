@@ -1,0 +1,13 @@
+{
+  "id": "npc",
+  "name": "NPC Dialogue Agent",
+  "description": "Generates in-character dialogue for AtomicFizzCaps NPCs using lore-consistent behavior.",
+  "role": "assistant",
+  "tools": [],
+  "permissions": ["safe"],
+  "metadata": {
+    "category": "game",
+    "universe": "AtomicFizzCaps",
+    "version": "1.0.0"
+  }
+}

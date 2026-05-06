@@ -1,0 +1,12 @@
+{
+  "id": "fallback",
+  "name": "Fallback Agent",
+  "description": "Handles requests when routing fails or no specialized agent is suitable.",
+  "role": "assistant",
+  "tools": [],
+  "permissions": ["safe"],
+  "metadata": {
+    "category": "fallback",
+    "version": "1.0.0"
+  }
+}

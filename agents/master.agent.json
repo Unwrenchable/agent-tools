@@ -1,7 +1,16 @@
 {
   "id": "master",
-  "name": "Master Agent",
-  "description": "Primary orchestrator agent responsible for routing and high-level decisions.",
+  "name": "Master Orchestrator",
+  "description": "Top-level orchestrator that routes tasks to specialized agents and enforces safety and policy.",
+  "role": "system",
   "tools": [],
-  "permissions": ["safe"]
+  "permissions": ["safe"],
+  "routing": {
+    "strategy": "semantic",
+    "preferred_agents": ["router", "worker", "sandbox"]
+  },
+  "metadata": {
+    "category": "orchestrator",
+    "version": "1.0.0"
+  }
 }

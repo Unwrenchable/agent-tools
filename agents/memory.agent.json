@@ -1,0 +1,12 @@
+{
+  "id": "memory",
+  "name": "Memory Agent",
+  "description": "Summarizes, compresses, and retrieves long-term context for other agents.",
+  "role": "assistant",
+  "tools": [],
+  "permissions": ["safe"],
+  "metadata": {
+    "category": "memory",
+    "version": "1.0.0"
+  }
+}

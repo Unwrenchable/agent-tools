@@ -1,0 +1,12 @@
+{
+  "id": "sandbox",
+  "name": "Sandbox Agent",
+  "description": "Runs potentially risky or experimental operations in a restricted, non-destructive environment.",
+  "role": "assistant",
+  "tools": [],
+  "permissions": ["sandbox-only"],
+  "metadata": {
+    "category": "safety",
+    "version": "1.0.0"
+  }
+}
