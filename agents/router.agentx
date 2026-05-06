@@ -10,7 +10,7 @@
   "input_format": {"type": "text"},
   "output_format": {"type": "json"},
   "tools_allowed": [],
-  "memory_policy": {"adapter": "json", "namespace": "router"},
+  "memory_policy": {"adapter": "json", "namespace": "router", "use_global": true, "use_agent_local": true, "max_history": 6},
   "routing_tags": ["routing", "classification", "dispatch"],
   "provider_preferences": ["local", "openai", "groq"]
 }

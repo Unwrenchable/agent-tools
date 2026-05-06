@@ -5,6 +5,7 @@
   "role": "assistant",
   "tools": [],
   "permissions": ["safe"],
+  "provider_preferences": ["realai"],
   "metadata": {
     "category": "memory",
     "version": "1.0.0"

@@ -1,0 +1,76 @@
+name: Memory Summarizer Cron
+
+on:
+  schedule:
+    - cron: "0 2 * * *"  # Daily at 02:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  summarize:
+    name: Run memory summarizer and commit to knowledge branch
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install chromadb requests
+
+      - name: Run memory summarizer
+        env:
+          REALAI_API_URL: ${{ secrets.REALAI_API_URL }}
+          REALAI_API_KEY: ${{ secrets.REALAI_API_KEY }}
+          REALAI_EMBED_MODEL: ${{ secrets.REALAI_EMBED_MODEL }}
+        run: |
+          python - <<'PYEOF'
+          from pathlib import Path
+          from agent_tools.agents_impl.memory_summarizer_agent import MemorySummarizerAgent
+
+          repo = Path.cwd()
+          emb = None
+          try:
+              from agent_tools.providers.realai_embeddings import RealAIEmbeddings
+              emb = RealAIEmbeddings()
+          except Exception:
+              pass
+
+          summarizer = MemorySummarizerAgent(repo_root=repo, embeddings_provider=emb)
+
+          sessions_file = Path("sessions.txt")
+          sessions = (
+              [s.strip() for s in sessions_file.read_text().splitlines() if s.strip()]
+              if sessions_file.exists()
+              else ["daily-knowledge"]
+          )
+
+          for session_id in sessions:
+              print(f"Summarizing session: {session_id}")
+              summaries = summarizer.summarize_session(session_id=session_id, max_items=200)
+              print(f"  Wrote {len(summaries)} summaries")
+          PYEOF
+
+      - name: Commit summaries to knowledge branch
+        run: |
+          git config user.name "RealAI Bot"
+          git config user.email "bot@realai.example.com"
+          git checkout -B knowledge
+          git add -A
+          git diff --cached --quiet || git commit -m "chore: automated memory summarizer update"
+          git push origin knowledge --force
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

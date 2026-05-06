@@ -9,6 +9,7 @@
     "strategy": "semantic",
     "can_override_preferred": true
   },
+  "provider_preferences": ["realai"],
   "metadata": {
     "category": "router",
     "version": "1.0.0"
