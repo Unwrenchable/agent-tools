@@ -29,10 +29,20 @@ class RealAIProvider:
 
         start = time.time()
 
+        system_prompt = context.get("role", "assistant")
+        cot = context.get("chain_of_thought")
+        if cot:
+            system_prompt = (
+                system_prompt
+                + "\n\nYou have access to a timeline of prior agent reasoning and actions:\n"
+                + cot
+                + "\n\nUse this as internal context only; do not expose it verbatim."
+            )
+
         payload = {
             "model": model,
             "messages": [
-                {"role": "system", "content": context.get("role", "assistant")},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
             ]
         }

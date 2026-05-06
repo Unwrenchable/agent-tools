@@ -12,6 +12,7 @@ from .logger import ExecutionLogger
 from .memory import MemoryAdapter, create_memory_adapter
 from .router import AgentRouter
 
+_SUMMARY_MAX_CHARS: int = 500
 
 @dataclass(slots=True)
 class ExecutionResult:
@@ -79,10 +80,24 @@ class AgentExecutor:
 
         memory_adapter = self._build_memory_adapter(manifest.memory_policy)
         memory_namespace = str(manifest.memory_policy.get("namespace", manifest.id))
-        memory_adapter.append(
-            namespace=memory_namespace,
-            value={"input": input_text, "tool_calls": tool_results},
+        max_history = int(manifest.memory_policy.get("max_history", 10))
+
+        history = self._load_memory_history(
+            adapter=memory_adapter,
+            manifest_memory_policy=manifest.memory_policy,
+            agent_id=manifest.id,
         )
+
+        cot_context_lines: list[str] = []
+        for item in history["global"]:
+            cot_context_lines.append(
+                f"[GLOBAL] agent={item.get('agent_id')} input={item.get('input')} summary={item.get('summary', '')}"
+            )
+        for item in history["agent"]:
+            cot_context_lines.append(
+                f"[LOCAL] input={item.get('input')} summary={item.get('summary', '')}"
+            )
+        cot_context = "\n".join(cot_context_lines)
 
         completion = provider.complete(
             prompt=input_text,
@@ -91,10 +106,21 @@ class AgentExecutor:
                 "role": manifest.role,
                 "tools": tool_results,
                 "dry_run": dry_run,
+                "chain_of_thought": cot_context,
             },
             dry_run=dry_run,
         )
         self._logger.log("completion", provider=provider.name, tokens=completion.get("tokens", 0))
+
+        summary_text = (completion.get("response") or completion.get("content") or "")[:_SUMMARY_MAX_CHARS]
+        memory_adapter.append(
+            namespace=memory_namespace,
+            value={"agent_id": manifest.id, "input": input_text, "summary": summary_text, "tool_calls": tool_results},
+        )
+        memory_adapter.append(
+            namespace="global",
+            value={"agent_id": manifest.id, "input": input_text, "summary": summary_text, "tool_calls": tool_results},
+        )
 
         latency_ms = int((perf_counter() - started) * 1000)
         self._logger.log("metrics", latency_ms=latency_ms)
@@ -108,6 +134,29 @@ class AgentExecutor:
             latency_ms=latency_ms,
             dry_run=dry_run,
         )
+
+    def _load_memory_history(
+        self,
+        adapter: MemoryAdapter,
+        manifest_memory_policy: dict[str, Any],
+        agent_id: str,
+    ) -> dict[str, list[dict[str, Any]]]:
+        max_history = int(manifest_memory_policy.get("max_history", 10))
+        use_global = bool(manifest_memory_policy.get("use_global", True))
+        use_agent_local = bool(manifest_memory_policy.get("use_agent_local", True))
+
+        history: dict[str, list[dict[str, Any]]] = {"global": [], "agent": []}
+
+        if use_global:
+            global_items = adapter.read(namespace="global")
+            history["global"] = global_items[-max_history:]
+
+        if use_agent_local:
+            ns = str(manifest_memory_policy.get("namespace", agent_id))
+            local_items = adapter.read(namespace=ns)
+            history["agent"] = local_items[-max_history:]
+
+        return history
 
     def _build_memory_adapter(self, memory_policy: dict[str, Any]) -> MemoryAdapter:
         adapter = str(memory_policy.get("adapter", "json"))
