@@ -28,6 +28,15 @@ const api = {
       .then((r) => r.data.items || []),
 
   /**
+   * Fetch memory item counts grouped by session.
+   * @returns {Promise<{sessions: Array}>}
+   */
+  sessionSizes: () =>
+    axios
+      .get(`${INSPECTOR_BASE}/api/session_sizes`)
+      .then((r) => r.data || { sessions: [] }),
+
+  /**
    * List all approval requests.
    * @returns {Promise<Array>}
    */

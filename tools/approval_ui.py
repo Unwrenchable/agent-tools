@@ -112,6 +112,11 @@ _INDEX_HTML = """
 # Slack request verification
 # ---------------------------------------------------------------------------
 
+# Maximum age (seconds) of an inbound Slack request timestamp before it is
+# rejected to prevent replay attacks.
+_SLACK_TIMESTAMP_MAX_AGE = 300
+
+
 def _verify_slack_request(req) -> bool:
     """Verify an inbound Slack request using the signing secret.
 
@@ -127,7 +132,7 @@ def _verify_slack_request(req) -> bool:
         ts = int(timestamp)
     except (ValueError, TypeError):
         return False
-    if abs(time.time() - ts) > 300:
+    if abs(time.time() - ts) > _SLACK_TIMESTAMP_MAX_AGE:
         return False
 
     body = req.get_data(as_text=True)

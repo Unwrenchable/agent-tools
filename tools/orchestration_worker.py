@@ -42,6 +42,7 @@ for _p in [str(_TOOLS_DIR), str(_REPO_ROOT_DEFAULT)]:
 
 from approval_store import annotate_request, list_requests, update_request
 from notifier import Notifier
+from github_workflow_helper import dispatch_workflow_and_poll, fetch_workflow_run_logs
 from agent_tools.agents_impl.code_engineer_agent import CodeEngineerAgent
 
 # ------------------------------------------------------------------
@@ -50,6 +51,16 @@ from agent_tools.agents_impl.code_engineer_agent import CodeEngineerAgent
 _POLL_INTERVAL = int(os.environ.get("ORCHESTRATION_POLL_INTERVAL", "5"))
 _REPO_ROOT = Path(os.environ.get("REPO_ROOT", str(_REPO_ROOT_DEFAULT))).resolve()
 _SANDBOX_IMAGE = os.environ.get("SANDBOX_IMAGE", "realai-sandbox:latest")
+
+# GitHub Actions CI gate (optional — only active when both vars are set)
+_GITHUB_REPO = os.environ.get("GITHUB_REPO", "")
+_GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+_WORKFLOW_FILE = os.environ.get("GITHUB_CI_WORKFLOW", "ci_on_demand.yml")
+_GITHUB_REF = os.environ.get("GITHUB_REF", "main")
+_CI_TIMEOUT = int(os.environ.get("CI_DISPATCH_TIMEOUT", "900"))
+_CI_POLL_INTERVAL = int(os.environ.get("CI_POLL_INTERVAL", "10"))
+# Directory to archive CI run logs for auditing.
+_CI_LOGS_DIR = Path(os.environ.get("CI_LOGS_DIR", ".ci_logs"))
 
 _notifier = Notifier()
 
@@ -79,6 +90,46 @@ def _execute_apply_patch(item: dict[str, Any]) -> dict[str, Any]:
             )
             return {"ok": False, "stage": "tests", "result": test_res}
         _notifier.notify(f"Tests passed in sandbox for approval `{item['id']}`")
+
+    # Optional GitHub Actions CI gate — skip if env vars not configured.
+    if _GITHUB_TOKEN and _GITHUB_REPO:
+        _notifier.notify(
+            f"Triggering CI workflow `{_WORKFLOW_FILE}` for approval `{item['id']}`"
+        )
+        ci_ok, ci_result = dispatch_workflow_and_poll(
+            repo=_GITHUB_REPO,
+            workflow_file=_WORKFLOW_FILE,
+            ref=_GITHUB_REF,
+            token=_GITHUB_TOKEN,
+            timeout_seconds=_CI_TIMEOUT,
+            poll_interval=_CI_POLL_INTERVAL,
+        )
+        if not ci_ok:
+            _notifier.notify(
+                f"CI workflow FAILED for approval `{item['id']}`: {ci_result}",
+                title="CI failure",
+            )
+            return {"ok": False, "stage": "ci", "result": ci_result}
+
+        run_id = ci_result.get("run_id")
+        _notifier.notify(f"CI passed for approval `{item['id']}`, run_id={run_id}")
+
+        # Archive run logs for audit.
+        if run_id:
+            logs_ok, logs_result = fetch_workflow_run_logs(
+                repo=_GITHUB_REPO, run_id=run_id, token=_GITHUB_TOKEN
+            )
+            if logs_ok:
+                try:
+                    _CI_LOGS_DIR.mkdir(parents=True, exist_ok=True)
+                    for fname, content in logs_result["files"].items():
+                        safe = fname.replace("/", "_").replace("\\", "_")
+                        (_CI_LOGS_DIR / f"{run_id}_{safe}").write_bytes(content)
+                    _notifier.notify(f"CI logs archived for run {run_id}")
+                except Exception as exc:  # noqa: BLE001
+                    print(f"[worker] could not archive CI logs: {exc}")
+            else:
+                print(f"[worker] failed to fetch CI logs: {logs_result}")
 
     if use_sandbox:
         return agent.apply_patch_and_commit_sandbox(

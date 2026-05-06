@@ -35,10 +35,18 @@ jobs:
           pip install chromadb requests
 
       - name: Run full test suite
-        run: pytest -q
+        run: pytest -q --tb=short --log-cli-level=WARNING 2>&1 | tee pytest.log
 
       - name: Run memory summarizer tests
-        run: pytest tests/test_memory_summarizer.py -v
+        run: pytest tests/test_memory_summarizer.py -v 2>&1 | tee -a pytest.log
 
       - name: Run code engineer tests
-        run: pytest tests/test_code_engineer.py tests/test_code_engineer_sandbox.py -v
+        run: pytest tests/test_code_engineer.py tests/test_code_engineer_sandbox.py -v 2>&1 | tee -a pytest.log
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-${{ github.run_id }}
+          path: pytest.log
+          retention-days: 14

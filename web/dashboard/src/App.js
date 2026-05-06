@@ -1,5 +1,26 @@
 import React, { useCallback, useEffect, useState } from "react";
 import api from "./api";
+import { Line } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+);
 
 // ---------------------------------------------------------------------------
 // Styles (inline for zero-dep simplicity)
@@ -12,16 +33,6 @@ const S = {
   btn:     { padding: "0.3rem 0.8rem", fontSize: "1rem", cursor: "pointer", borderRadius: 4, border: "none", background: "#3b82f6", color: "#fff" },
   item:    { marginBottom: "0.5rem", lineHeight: 1.5 },
   dim:     { color: "#64748b", fontSize: "0.9em" },
-  tag: (status) => ({
-    display: "inline-block",
-    padding: "0.1rem 0.5rem",
-    borderRadius: 4,
-    fontSize: "0.8em",
-    fontWeight: "bold",
-    marginLeft: "0.5rem",
-    background: status === "approved" ? "#d1fae5" : status === "rejected" ? "#fee2e2" : status === "executed" ? "#dbeafe" : "#fef9c3",
-    color:      status === "approved" ? "#065f46" : status === "rejected" ? "#991b1b" : status === "executed" ? "#1e3a8a" : "#713f12",
-  }),
 };
 
 // ---------------------------------------------------------------------------
@@ -177,7 +188,7 @@ function ApprovalsPanel() {
       {items.map((it) => (
         <div key={it.id} style={{ ...S.card, marginTop: "0.5rem", marginBottom: 0 }}>
           <strong>{it.action}</strong>
-          <span style={S.tag(it.status)}>{it.status.toUpperCase()}</span>
+          <span style={_statusStyle(it.status)}>{it.status.toUpperCase()}</span>
           <span style={{ ...S.dim, marginLeft: "0.5rem", fontSize: "0.75em" }}>
             {it.id}
           </span>
@@ -191,12 +202,132 @@ function ApprovalsPanel() {
 }
 
 // ---------------------------------------------------------------------------
+// Session sizes / memory growth chart
+// ---------------------------------------------------------------------------
+
+/** Map a status string to badge colours without nested ternaries. */
+function _statusStyle(status) {
+  const map = {
+    approved: { background: "#d1fae5", color: "#065f46" },
+    rejected: { background: "#fee2e2", color: "#991b1b" },
+    executed: { background: "#dbeafe", color: "#1e3a8a" },
+  };
+  return map[status] || { background: "#fef9c3", color: "#713f12" };
+}
+
+function SessionSizesPanel() {
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading]   = useState(false);
+  const [error,   setError]     = useState("");
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await api.sessionSizes();
+      setSessions(data.sessions || []);
+    } catch (e) {
+      setError("Could not load session sizes: " + (e.message || e));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const chartData = {
+    labels: sessions.map((s) => s.session_id),
+    datasets: [
+      {
+        label: "Global memory items",
+        data: sessions.map((s) => s.global_count || 0),
+        fill: false,
+        borderColor: "rgb(59, 130, 246)",
+        backgroundColor: "rgba(59, 130, 246, 0.15)",
+        tension: 0.3,
+        pointRadius: 4,
+      },
+    ],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: { position: "top" },
+      title: { display: false },
+    },
+    scales: {
+      y: { beginAtZero: true, ticks: { precision: 0 } },
+    },
+  };
+
+  return (
+    <div style={S.card}>
+      <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+        <h2 style={{ margin: 0 }}>📈 Memory Growth</h2>
+        <button
+          style={{ ...S.btn, background: "#64748b" }}
+          onClick={refresh}
+          disabled={loading}
+        >
+          {loading ? "…" : "Refresh"}
+        </button>
+      </div>
+
+      {error && <p style={{ color: "#ef4444" }}>{error}</p>}
+
+      {sessions.length === 0 && !loading && (
+        <p style={S.dim}>
+          No session data yet — start the Memory Inspector UI and run some
+          agents to populate vector memory.
+        </p>
+      )}
+
+      {sessions.length > 0 && (
+        <>
+          <div style={{ maxWidth: 640, marginTop: "1rem" }}>
+            <Line data={chartData} options={chartOptions} />
+          </div>
+          <table
+            style={{ borderCollapse: "collapse", width: "100%", marginTop: "1rem", fontSize: "0.9em" }}
+          >
+            <thead>
+              <tr style={{ background: "#f1f5f9" }}>
+                <th style={{ textAlign: "left", padding: "0.4rem 0.6rem" }}>Session</th>
+                <th style={{ textAlign: "right", padding: "0.4rem 0.6rem" }}>Global items</th>
+                <th style={{ textAlign: "right", padding: "0.4rem 0.6rem" }}>Agent namespaces</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sessions.map((s) => (
+                <tr key={s.session_id} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                  <td style={{ padding: "0.4rem 0.6rem", fontFamily: "monospace" }}>
+                    {s.session_id}
+                  </td>
+                  <td style={{ textAlign: "right", padding: "0.4rem 0.6rem" }}>
+                    {s.global_count}
+                  </td>
+                  <td style={{ textAlign: "right", padding: "0.4rem 0.6rem" }}>
+                    {Object.keys(s.agent_counts || {}).length}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Root app
 // ---------------------------------------------------------------------------
 export default function App() {
   return (
     <div style={S.page}>
       <h1 style={S.heading}>RealAI Dashboard</h1>
+      <SessionSizesPanel />
       <MemoryPanel />
       <ApprovalsPanel />
     </div>

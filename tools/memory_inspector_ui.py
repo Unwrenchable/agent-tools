@@ -184,6 +184,63 @@ def search_json():
     return jsonify({"items": _search_items(session, q)})
 
 
+@app.route("/api/session_sizes")
+def session_sizes():
+    """Return memory item counts grouped by session.
+
+    Response::
+
+        {
+          "sessions": [
+            {
+              "session_id": "abc",
+              "global_count": 12,
+              "agent_counts": {"abc:agent:my-agent": 5}
+            },
+            ...
+          ]
+        }
+
+    Only works when the memory backend is ``ChromaVectorMemoryAdapter``
+    (i.e. chromadb is installed).  Returns ``{"sessions": []}`` otherwise.
+    """
+    client = getattr(_mem, "_client", None)
+    if client is None:
+        return jsonify({"sessions": []})
+
+    try:
+        collections = client.list_collections()
+    except Exception:
+        return jsonify({"sessions": []})
+
+    sessions: dict[str, dict] = {}
+    for col in collections:
+        # chromadb Collection objects expose .name; handle edge cases.
+        name: str = getattr(col, "name", None) or str(col)
+        parts = name.split(":", 1)
+        if len(parts) < 2:
+            continue
+        session_id, ns_rest = parts[0], parts[1]
+
+        try:
+            count: int = col.count()
+        except Exception:
+            count = 0
+
+        if session_id not in sessions:
+            sessions[session_id] = {
+                "session_id": session_id,
+                "global_count": 0,
+                "agent_counts": {},
+            }
+        if ns_rest == "global":
+            sessions[session_id]["global_count"] = count
+        else:
+            sessions[session_id]["agent_counts"][name] = count
+
+    return jsonify({"sessions": list(sessions.values())})
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
