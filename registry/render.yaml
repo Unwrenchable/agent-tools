@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: realai-registry
+    env: docker
+    plan: starter
+    dockerfilePath: ./registry/Dockerfile
+    dockerContext: ./registry
+    autoDeploy: true
+    envVars:
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_WEBHOOK_SECRET
+        sync: false
+      - key: GITHUB_OWNER
+        value: Unwrenchable
+      - key: GITHUB_REPOS
+        value: realai,agent-tools,atomicfizzcaps,overseer-terminal
+      - key: PORT
+        value: "4000"

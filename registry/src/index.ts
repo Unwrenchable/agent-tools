@@ -19,8 +19,9 @@ export {
 } from "./detectors.js";
 export { fetchFileContent } from "./github/client.js";
 export { fetchLastUpdated, walkRepoFiles } from "./github/scanner.js";
-export { AgentRegistry, registry } from "./registry.js";
+export { AgentRegistry, refreshRegistry, registry } from "./registry.js";
 export { scanAllRepos, scanRepo } from "./scanner.js";
+export { slugify } from "./utils.js";
 export type {
   AgentRecord,
   AgentScanHit,
@@ -28,24 +29,39 @@ export type {
   RawAgentManifest,
 } from "./types.js";
 
-// ── CLI runner (invoked when this file is the main module) ───────────────────
+// ── Entry point: HTTP server or scan-to-stdout ────────────────────────────────
 
 async function main(): Promise<void> {
+  const { config } = await import("./config.js");
   const { registry } = await import("./registry.js");
 
-  console.log("[realai-registry] Starting Universal Agent Scanner …");
-  console.log(`[realai-registry] Repos: ${(await import("./config.js")).config.repos.join(", ")}`);
+  if (config.port > 0) {
+    // ── HTTP server mode ────────────────────────────────────────────────────
+    const { startServer } = await import("./api/server.js");
 
-  await registry.populate();
+    console.log("[realai-registry] Starting HTTP server …");
+    console.log(`[realai-registry] Repos: ${config.repos.join(", ")}`);
 
-  const output = registry.toJSON();
-  process.stdout.write(JSON.stringify(output, null, 2) + "\n");
+    // Populate the registry before accepting traffic.
+    await registry.populate();
+    await startServer(config.port);
+  } else {
+    // ── Scan-to-stdout mode (default / CI) ──────────────────────────────────
+    console.log("[realai-registry] Starting Universal Agent Scanner …");
+    console.log(`[realai-registry] Repos: ${config.repos.join(", ")}`);
+
+    await registry.populate();
+
+    process.stdout.write(JSON.stringify(registry.toJSON(), null, 2) + "\n");
+  }
 }
 
-// Detect whether we are the entry-point module in both CJS and ESM contexts.
+// Detect whether we are the entry-point module using import.meta.url (ESM).
+import { fileURLToPath } from "url";
+
 const isMain =
   process.argv[1] != null &&
-  (process.argv[1].endsWith("index.js") || process.argv[1].endsWith("index.ts"));
+  process.argv[1] === fileURLToPath(import.meta.url);
 
 if (isMain) {
   main().catch((err: unknown) => {

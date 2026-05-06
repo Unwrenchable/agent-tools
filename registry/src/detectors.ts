@@ -8,6 +8,7 @@
 // GitHub API.  All I/O happens in scanner.ts; detectors only parse content.
 
 import type { AgentScanHit, AgentSourceType, RawAgentManifest } from "./types.js";
+import { slugify } from "./utils.js";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -26,11 +27,7 @@ function tryParseJSON(raw: string): RawAgentManifest | null {
 
 /** Build a slug from repo + path when a manifest has no id field. */
 function derivedId(repo: string, path: string): string {
-  return `${repo}/${path}`
-    .toLowerCase()
-    .replace(/[^a-z0-9-]/g, "-")  // only alphanumeric + hyphens (matches slugify convention)
-    .replace(/-{2,}/g, "-")       // collapse consecutive hyphens
-    .replace(/^-|-$/g, "");       // trim leading/trailing hyphens
+  return slugify(`${repo}/${path}`);
 }
 
 // ── manifest detectors ───────────────────────────────────────────────────────

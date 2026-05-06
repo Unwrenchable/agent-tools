@@ -98,3 +98,11 @@ export class AgentRegistry {
 
 /** Singleton instance shared across the process. */
 export const registry = new AgentRegistry();
+
+/**
+ * Convenience function for use by the webhook handler and other callers that
+ * need to trigger a registry refresh without accessing the class directly.
+ */
+export async function refreshRegistry(): Promise<void> {
+  await registry.populate();
+}
