@@ -57,9 +57,10 @@ class MemorySummarizerAgent:
         adapter_name: str = "vector",
         embeddings_provider: Any | None = None,
         provider: RealAIProvider | None = None,
+        memory: MemoryAdapter | None = None,
     ) -> None:
         self.repo_root = repo_root
-        self.memory: MemoryAdapter = create_memory_adapter(
+        self.memory: MemoryAdapter = memory or create_memory_adapter(
             adapter=adapter_name,
             root_dir=repo_root,
             embeddings_provider=embeddings_provider,

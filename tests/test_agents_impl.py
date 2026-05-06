@@ -34,8 +34,7 @@ def _make_provider(response: str = "• item 1\n• item 2") -> MagicMock:
 class TestMemorySummarizerAgent:
     def _make_agent(self, provider: Any | None = None) -> tuple[MemorySummarizerAgent, VectorMemoryAdapter]:
         mem = VectorMemoryAdapter()
-        agent = MemorySummarizerAgent(repo_root=Path("/tmp/test-summarizer"))
-        agent.memory = mem  # swap for in-memory adapter
+        agent = MemorySummarizerAgent(repo_root=Path("/tmp/test-summarizer"), memory=mem)
         if provider is not None:
             agent._provider = provider
         return agent, mem
@@ -167,7 +166,7 @@ class TestCodeEngineerAgent:
             commit_message="feat: add hello",
         )
 
-        assert result["success"] is True, result["stderr"]
+        assert result["ok"] is True, result["stderr"]
         assert result["commit_sha"] is not None
         assert len(result["commit_sha"]) == 40  # full SHA
         assert (tmp_path / "src" / "hello.py").exists()
@@ -191,7 +190,7 @@ class TestCodeEngineerAgent:
             author="Alice <alice@example.com>",
         )
 
-        assert result["success"] is True, result["stderr"]
+        assert result["ok"] is True, result["stderr"]
         log = subprocess.run(
             ["git", "log", "--format=%an <%ae>", "-1"],
             cwd=str(tmp_path), capture_output=True, text=True,
@@ -234,7 +233,7 @@ class TestCodeEngineerAgent:
             commit_message="refactor: add docstring",
         )
 
-        assert result["success"] is True, result["stderr"]
+        assert result["ok"] is True, result["stderr"]
         assert result["commit_sha"] is not None
         content = target.read_text()
         assert "Return the sum" in content
@@ -256,8 +255,8 @@ class TestCodeEngineerAgent:
             commit_message="bad patch",
         )
 
-        assert result["success"] is False
-        assert "git apply" in result["stderr"].lower() or result["stderr"]
+        assert result["ok"] is False
+        assert result["stderr"]
 
     def test_write_file_and_commit_creates_parent_dirs(self, tmp_path: Path) -> None:
         subprocess.run(["git", "init"], cwd=str(tmp_path), check=True, capture_output=True)
@@ -277,7 +276,7 @@ class TestCodeEngineerAgent:
             commit_message="chore: deep file",
         )
 
-        assert result["success"] is True, result["stderr"]
+        assert result["ok"] is True, result["stderr"]
         assert (tmp_path / "deep" / "nested" / "dir" / "file.txt").exists()
 
     def test_run_helper_returns_structured_result(self, tmp_path: Path) -> None:
