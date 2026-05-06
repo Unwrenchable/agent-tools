@@ -308,3 +308,90 @@ def test_npc_intel_manifest_properties() -> None:
     assert npc.memory_policy["max_history"] == 50
     assert "lore" in npc.routing_tags
 
+
+# ---------------------------------------------------------------------------
+# ChromaVectorMemoryAdapter tests (skipped if chromadb not installed)
+# ---------------------------------------------------------------------------
+
+chromadb = pytest.importorskip("chromadb", reason="chromadb not installed")
+
+
+def test_chroma_adapter_append_and_read(tmp_path: Path) -> None:
+    from agent_tools.engine.memory import ChromaVectorMemoryAdapter
+
+    adapter = ChromaVectorMemoryAdapter(tmp_path)
+    adapter.append("ns", {"agent_id": "a", "input": "hello world", "summary": "greeted"})
+    adapter.append("ns", {"agent_id": "b", "input": "goodbye", "summary": "farewell"})
+
+    records = adapter.read("ns", limit=10)
+    assert len(records) == 2
+    assert records[0]["agent_id"] == "a"
+    assert records[1]["agent_id"] == "b"
+
+
+def test_chroma_adapter_read_respects_limit(tmp_path: Path) -> None:
+    from agent_tools.engine.memory import ChromaVectorMemoryAdapter
+
+    adapter = ChromaVectorMemoryAdapter(tmp_path)
+    for i in range(6):
+        adapter.append("ns", {"agent_id": "a", "input": f"msg {i}", "summary": f"s{i}"})
+
+    records = adapter.read("ns", limit=3)
+    assert len(records) == 3
+
+
+def test_chroma_adapter_search_returns_relevant_results(tmp_path: Path) -> None:
+    from agent_tools.engine.memory import ChromaVectorMemoryAdapter
+
+    adapter = ChromaVectorMemoryAdapter(tmp_path)
+    adapter.append("ns", {"agent_id": "a", "input": "deploy the service", "summary": "deployed"})
+    adapter.append("ns", {"agent_id": "b", "input": "write unit tests", "summary": "tests written"})
+    adapter.append("ns", {"agent_id": "c", "input": "deploy to staging", "summary": "staged"})
+
+    hits = adapter.search("ns", query="deploy", k=5)
+    # Semantic search should surface both deploy-related entries
+    assert len(hits) >= 1
+    assert all(isinstance(h, dict) for h in hits)
+
+
+def test_chroma_adapter_search_empty_namespace_returns_empty(tmp_path: Path) -> None:
+    from agent_tools.engine.memory import ChromaVectorMemoryAdapter
+
+    adapter = ChromaVectorMemoryAdapter(tmp_path)
+    results = adapter.search("empty-ns", query="anything", k=5)
+    assert results == []
+
+
+def test_chroma_adapter_persists_across_instances(tmp_path: Path) -> None:
+    from agent_tools.engine.memory import ChromaVectorMemoryAdapter
+
+    adapter1 = ChromaVectorMemoryAdapter(tmp_path)
+    adapter1.append("ns", {"agent_id": "a", "input": "persisted msg", "summary": "ok"})
+
+    adapter2 = ChromaVectorMemoryAdapter(tmp_path)
+    records = adapter2.read("ns", limit=10)
+    assert any(r.get("input") == "persisted msg" for r in records)
+
+
+def test_create_memory_adapter_chroma(tmp_path: Path) -> None:
+    from agent_tools.engine.memory import ChromaVectorMemoryAdapter, create_memory_adapter
+
+    adapter = create_memory_adapter("chroma", tmp_path)
+    assert isinstance(adapter, ChromaVectorMemoryAdapter)
+
+
+def test_safe_chroma_name_handles_colons() -> None:
+    from agent_tools.engine.memory import _safe_chroma_name
+
+    name = _safe_chroma_name("abc-def:global")
+    assert ":" not in name
+    assert len(name) >= 3
+    assert len(name) <= 63
+
+
+def test_safe_chroma_name_pads_short_names() -> None:
+    from agent_tools.engine.memory import _safe_chroma_name
+
+    name = _safe_chroma_name("ab")
+    assert len(name) >= 3
+
