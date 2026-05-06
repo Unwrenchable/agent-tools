@@ -313,9 +313,16 @@ def test_npc_intel_manifest_properties() -> None:
 # ChromaVectorMemoryAdapter tests (skipped if chromadb not installed)
 # ---------------------------------------------------------------------------
 
-chromadb = pytest.importorskip("chromadb", reason="chromadb not installed")
+try:
+    import chromadb as _chromadb_mod  # noqa: F401
+    _CHROMA_AVAILABLE = True
+except ImportError:
+    _CHROMA_AVAILABLE = False
+
+_skip_no_chroma = pytest.mark.skipif(not _CHROMA_AVAILABLE, reason="chromadb not installed")
 
 
+@_skip_no_chroma
 def test_chroma_adapter_append_and_read(tmp_path: Path) -> None:
     from agent_tools.engine.memory import ChromaVectorMemoryAdapter
 
@@ -329,6 +336,7 @@ def test_chroma_adapter_append_and_read(tmp_path: Path) -> None:
     assert records[1]["agent_id"] == "b"
 
 
+@_skip_no_chroma
 def test_chroma_adapter_read_respects_limit(tmp_path: Path) -> None:
     from agent_tools.engine.memory import ChromaVectorMemoryAdapter
 
@@ -340,6 +348,7 @@ def test_chroma_adapter_read_respects_limit(tmp_path: Path) -> None:
     assert len(records) == 3
 
 
+@_skip_no_chroma
 def test_chroma_adapter_search_returns_relevant_results(tmp_path: Path) -> None:
     from agent_tools.engine.memory import ChromaVectorMemoryAdapter
 
@@ -354,6 +363,7 @@ def test_chroma_adapter_search_returns_relevant_results(tmp_path: Path) -> None:
     assert all(isinstance(h, dict) for h in hits)
 
 
+@_skip_no_chroma
 def test_chroma_adapter_search_empty_namespace_returns_empty(tmp_path: Path) -> None:
     from agent_tools.engine.memory import ChromaVectorMemoryAdapter
 
@@ -362,6 +372,7 @@ def test_chroma_adapter_search_empty_namespace_returns_empty(tmp_path: Path) -> 
     assert results == []
 
 
+@_skip_no_chroma
 def test_chroma_adapter_persists_across_instances(tmp_path: Path) -> None:
     from agent_tools.engine.memory import ChromaVectorMemoryAdapter
 
@@ -373,6 +384,7 @@ def test_chroma_adapter_persists_across_instances(tmp_path: Path) -> None:
     assert any(r.get("input") == "persisted msg" for r in records)
 
 
+@_skip_no_chroma
 def test_create_memory_adapter_chroma(tmp_path: Path) -> None:
     from agent_tools.engine.memory import ChromaVectorMemoryAdapter, create_memory_adapter
 
@@ -380,6 +392,7 @@ def test_create_memory_adapter_chroma(tmp_path: Path) -> None:
     assert isinstance(adapter, ChromaVectorMemoryAdapter)
 
 
+@_skip_no_chroma
 def test_safe_chroma_name_handles_colons() -> None:
     from agent_tools.engine.memory import _safe_chroma_name
 
@@ -389,6 +402,7 @@ def test_safe_chroma_name_handles_colons() -> None:
     assert len(name) <= 63
 
 
+@_skip_no_chroma
 def test_safe_chroma_name_pads_short_names() -> None:
     from agent_tools.engine.memory import _safe_chroma_name
 
