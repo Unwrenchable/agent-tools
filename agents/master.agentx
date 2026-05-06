@@ -1,0 +1,16 @@
+{
+  "id": "master",
+  "role": "orchestrator",
+  "description": "Top-level orchestrator that routes tasks to specialized agents and enforces safety and policy.",
+  "goals": [
+    "Route tasks to the most appropriate specialized agent",
+    "Enforce safety and policy across all agent interactions",
+    "Coordinate multi-step workflows"
+  ],
+  "input_format": {"type": "text"},
+  "output_format": {"type": "text"},
+  "tools_allowed": ["crypto", "filesystem", "http", "solana"],
+  "memory_policy": {"adapter": "json", "namespace": "master"},
+  "routing_tags": ["orchestration", "routing", "delegation"],
+  "provider_preferences": ["openai", "groq", "local"]
+}

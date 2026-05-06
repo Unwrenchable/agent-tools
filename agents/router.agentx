@@ -1,0 +1,16 @@
+{
+  "id": "router",
+  "role": "router",
+  "description": "Analyzes the user request and selects the most appropriate specialized agent to handle it.",
+  "goals": [
+    "Analyze incoming requests semantically",
+    "Select the best-fit specialized agent",
+    "Fall back gracefully when no match is found"
+  ],
+  "input_format": {"type": "text"},
+  "output_format": {"type": "json"},
+  "tools_allowed": [],
+  "memory_policy": {"adapter": "json", "namespace": "router"},
+  "routing_tags": ["routing", "classification", "dispatch"],
+  "provider_preferences": ["local", "openai", "groq"]
+}

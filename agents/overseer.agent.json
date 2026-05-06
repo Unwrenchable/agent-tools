@@ -1,0 +1,12 @@
+{
+  "id": "overseer",
+  "name": "Overseer Agent",
+  "description": "Monitors other agents, enforces constraints, and can veto unsafe actions.",
+  "role": "system",
+  "tools": [],
+  "permissions": ["safe"],
+  "metadata": {
+    "category": "governance",
+    "version": "1.0.0"
+  }
+}
