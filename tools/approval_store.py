@@ -82,3 +82,27 @@ def get_request(
         if item["id"] == req_id:
             return item
     return None
+
+
+def annotate_request(
+    req_id: str,
+    store_path: Path = _DEFAULT_STORE,
+    **kwargs: Any,
+) -> bool:
+    """Merge arbitrary keyword fields into a request entry.
+
+    Use this to attach execution results, metadata, or flags without
+    touching the ``status`` field directly.  Returns ``True`` if the
+    request was found, ``False`` otherwise.
+
+    Example::
+
+        annotate_request(req_id, executed=True, result={"ok": True, "commit_sha": "abc…"})
+    """
+    data = _load(store_path)
+    for item in data["items"]:
+        if item["id"] == req_id:
+            item.update(kwargs)
+            _save(data, store_path)
+            return True
+    return False

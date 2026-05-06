@@ -8,6 +8,9 @@ The implementation is deliberately minimal and safe:
   stages all changes, and commits with the supplied message.
 * A ``dry_run=True`` flag stops after the pre-check so callers can
   validate a patch without touching the working tree.
+* ``apply_patch_and_commit_sandbox`` applies the patch inside a Docker
+  container (``realai-sandbox:latest`` by default) so filesystem operations
+  are fully isolated from the host.  Requires Docker and the sandbox image.
 * ``write_file_and_commit`` writes arbitrary text to a file, stages it, and
   commits — useful when the caller already has the final file content.
 * Neither method does a ``push``.  Pushing is left to the caller / CI.
@@ -16,12 +19,16 @@ Return value convention
 -----------------------
 All public methods return a dict with:
 
-* ``ok``    — ``True`` on success, ``False`` on any failure.
-* ``stage`` — Which stage completed last: ``"precheck"``, ``"dry-run"``,
-              ``"apply"``, ``"add"``, or ``"commit"``.
+* ``ok``         — ``True`` on success, ``False`` on any failure.
+* ``stage``      — Which stage completed last: ``"precheck"``, ``"dry-run"``,
+                   ``"apply"``, ``"sandbox"``, ``"add"``, or ``"commit"``.
 * ``commit_sha`` — Full 40-char SHA on successful commit, else ``None``.
-* ``note``  — Optional human-readable note (e.g. "nothing to commit").
-* ``stdout`` / ``stderr`` — Raw git output.
+* ``note``       — Optional human-readable note (e.g. "nothing to commit").
+* ``stdout`` / ``stderr`` — Raw git / docker output.
+
+Build the sandbox Docker image once::
+
+    docker build -t realai-sandbox:latest tools/sandbox_runner
 
 Typical usage::
 
@@ -33,15 +40,14 @@ Typical usage::
     # Validate without touching the tree:
     r = agent.apply_patch_and_commit(patch_text=diff, commit_message="feat: …", dry_run=True)
     if r["ok"]:
-        print("Patch is valid; applying…")
-        r = agent.apply_patch_and_commit(patch_text=diff, commit_message="feat: …")
-        print("Committed:", r["commit_sha"])
-    else:
-        print("Patch rejected:", r["stderr"])
+        # Apply inside Docker sandbox:
+        r = agent.apply_patch_and_commit_sandbox(patch_text=diff, commit_message="feat: …")
+        print("Committed:", r.get("commit_sha"))
 """
 from __future__ import annotations
 
 import os
+import shlex
 import subprocess
 import tempfile
 from pathlib import Path
@@ -146,6 +152,105 @@ class CodeEngineerAgent:
                     os.unlink(patch_path)
                 except OSError:
                     pass
+
+        return self._stage_and_commit(commit_message=commit_message, author=author)
+
+    def apply_patch_and_commit_sandbox(
+        self,
+        patch_text: str,
+        commit_message: str,
+        author: str | None = None,
+        image: str = "realai-sandbox:latest",
+    ) -> dict[str, Any]:
+        """Apply a unified diff inside a Docker container and commit from the host.
+
+        The patch is mounted into the container read-only; the repo working
+        tree is mounted read-write.  The container runs ``git apply`` so
+        filesystem operations are sandboxed from the host environment.
+        After the container exits successfully the host runs
+        ``git add -A`` and ``git commit``.
+
+        Requirements:
+
+        * Docker must be installed and the daemon running.
+        * The image ``realai-sandbox:latest`` (or *image*) must exist.
+          Build it once with::
+
+              docker build -t realai-sandbox:latest tools/sandbox_runner
+
+        Args:
+            patch_text:     Unified diff in ``git diff`` format.
+            commit_message: Git commit message (used by the host commit).
+            author:         Optional ``"Name <email>"`` git author string.
+            image:          Docker image to run (default: ``realai-sandbox:latest``).
+
+        Returns:
+            Same ``{ok, stage, commit_sha, stdout, stderr}`` structure as
+            :meth:`apply_patch_and_commit`.
+        """
+        patch_path: str | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".patch", delete=False, encoding="utf-8"
+            ) as tmp:
+                tmp.write(patch_text)
+                patch_path = tmp.name
+
+            repo_mount = str(self.repo_root.resolve())
+            docker_cmd = [
+                "docker", "run", "--rm",
+                "-v", f"{repo_mount}:/workspace",
+                "-v", f"{patch_path}:/tmp/patch.diff:ro",
+                "-w", "/workspace",
+                image,
+                "sh", "-c",
+                "git apply --check /tmp/patch.diff && git apply /tmp/patch.diff",
+            ]
+            proc = subprocess.run(
+                docker_cmd,
+                capture_output=True,
+                text=True,
+                timeout=300,
+            )
+        except FileNotFoundError:
+            return {
+                "ok": False,
+                "stage": "sandbox",
+                "commit_sha": None,
+                "stdout": "",
+                "stderr": "docker is not available in PATH",
+            }
+        except subprocess.TimeoutExpired:
+            return {
+                "ok": False,
+                "stage": "sandbox",
+                "commit_sha": None,
+                "stdout": "",
+                "stderr": "docker run timed out after 300 s",
+            }
+        except Exception as exc:  # noqa: BLE001
+            return {
+                "ok": False,
+                "stage": "sandbox",
+                "commit_sha": None,
+                "stdout": "",
+                "stderr": str(exc),
+            }
+        finally:
+            if patch_path is not None:
+                try:
+                    os.unlink(patch_path)
+                except OSError:
+                    pass
+
+        if proc.returncode != 0:
+            return {
+                "ok": False,
+                "stage": "sandbox",
+                "commit_sha": None,
+                "stdout": proc.stdout,
+                "stderr": f"docker sandbox apply failed:\n{proc.stderr}",
+            }
 
         return self._stage_and_commit(commit_message=commit_message, author=author)
 
