@@ -604,6 +604,7 @@ _MCP_SERVERS: dict = {
 
 _VSCODE_SETTINGS: dict = {
     "chat.mcp.enabled": True,
+    "chat.mcp.access": "all",
     "github.copilot.chat.agent.thinkingTool": True,
     "github.copilot.nextEditSuggestions.enabled": True,
 }
@@ -702,8 +703,8 @@ agentx check {base_id}-security-hardener --profile balanced
 ## MCP Servers
 
 The GitHub MCP server is configured in `.vscode/mcp.json`. Use `#github` tool
-references in Copilot Chat to search issues, pull requests, and code across the
-repository.
+references in Copilot Chat to search issues, pull requests, and code across this
+repository and related repos in your organization when expanding agent coverage.
 
 ## Preferred Patterns
 
