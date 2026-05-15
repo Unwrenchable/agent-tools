@@ -712,6 +712,8 @@ shared agents that are rolled out across multiple repositories.
 - Prefer the least-privilege profile that satisfies the task
 - Use `safe` for read-only analysis, `balanced` for code changes, `power` only
   when cross-repo network access or subagent spawning is required
+- `.vscode/settings.json` sets `chat.mcp.access` to `all` so agents can use all
+  configured MCP tools; reduce this if your repository has stricter access needs
 - Keep changes minimal, targeted, and validated before marking work complete
 """
 
