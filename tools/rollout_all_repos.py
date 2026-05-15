@@ -704,7 +704,8 @@ agentx check {base_id}-security-hardener --profile balanced
 
 The GitHub MCP server is configured in `.vscode/mcp.json`. Use `#github` tool
 references in Copilot Chat to search issues, pull requests, and code across this
-repository and related repos in your organization when expanding agent coverage.
+repository and related repos in your organization when creating or updating
+shared agents that are rolled out across multiple repositories.
 
 ## Preferred Patterns
 
