@@ -173,9 +173,9 @@ class ChromaVectorMemoryAdapter(MemoryAdapter):
 
         adapter = ChromaVectorMemoryAdapter(root_dir, embedding_fn=RealAIChromaEF())
 
-    Requires ``chromadb`` to be installed::
+    Requires the optional ``chroma`` extra::
 
-        pip install chromadb
+        pip install 'agent-tools[chroma]'
     """
 
     def __init__(self, root_dir: Path, embedding_fn: Any = None) -> None:
@@ -184,8 +184,8 @@ class ChromaVectorMemoryAdapter(MemoryAdapter):
             from chromadb.config import Settings  # noqa: PLC0415
         except ImportError as exc:
             raise ImportError(
-                "ChromaVectorMemoryAdapter requires chromadb. "
-                "Install it with: pip install chromadb"
+                "ChromaVectorMemoryAdapter requires the optional chromadb package. "
+                "Install it with: pip install 'agent-tools[chroma]'"
             ) from exc
 
         self._client = chromadb.PersistentClient(
