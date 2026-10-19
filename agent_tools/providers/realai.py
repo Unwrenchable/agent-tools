@@ -1,6 +1,22 @@
 import os
-import requests
 import time
+
+
+def _load_requests():
+    """Import requests only when a live RealAI call is made.
+
+    The provider is optional. A base install of the CLI must not fail just
+    because this extra is not installed.
+    """
+    try:
+        import requests
+    except ImportError as exc:  # pragma: no cover - depends on the install extra
+        raise ImportError(
+            "The RealAI provider requires the optional 'requests' package. "
+            "Install it with: pip install 'agent-tools[realai]'"
+        ) from exc
+    return requests
+
 
 class RealAIProvider:
     name = "realai"
@@ -59,7 +75,7 @@ class RealAIProvider:
             "Content-Type": "application/json"
         }
 
-        r = requests.post(f"{api_url}/v1/chat/completions", json=payload, headers=headers)
+        r = _load_requests().post(f"{api_url}/v1/chat/completions", json=payload, headers=headers)
         r.raise_for_status()
         data = r.json()
 

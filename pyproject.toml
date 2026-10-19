@@ -4,6 +4,8 @@ version = "0.1.0"
 description = "Reusable AI agent registry with capability checks, access profiles, and multi-repo rollout for GitHub Copilot and autonomous coding agents"
 readme = "README.md"
 requires-python = ">=3.11"
+# Core `agentx` commands use the standard library only. Optional providers
+# and backends are extras so a base install can run `agentx list`.
 dependencies = []
 keywords = [
   "ai-agents",
@@ -42,6 +44,12 @@ agent-tools = "agent_tools.cli:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+# RealAI chat + embeddings client (`requests` is imported lazily).
+realai = ["requests>=2.31"]
+# Persistent vector memory (`chromadb` is imported lazily).
+chroma = ["chromadb>=0.4"]
+# Approval and memory inspector UIs (`flask` is imported lazily).
+ui = ["flask>=3"]
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]
