@@ -20,7 +20,7 @@
     "typescript": "^5.4.5"
   },
   "overrides": {
-    "postcss": "^8.5.14"
+    "postcss": "^8.5.26"
   },
   "engines": {
     "node": ">=18"
